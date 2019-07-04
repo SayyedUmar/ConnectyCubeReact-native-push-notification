@@ -82,7 +82,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         bundle.putString("message", messageMap.get("message"));
         bundle.putString("sender_id", bundle.getString("user_id"));
 
-        Log.v(LOG_TAG, "[onMessageReceived] bundle: " + bundle);
+        System.out.println("[onMessageReceived] bundle: " + bundle);
 
         // We need to run this on the main thread, as the React code assumes that is true.
         // Namely, DevServerHelper constructs a Handler() without a Looper, which triggers:
@@ -130,6 +130,12 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         }
 
         Boolean isForeground = isApplicationInForeground();
+        System.out.println("[In Foreground]");
+        System.out.println(isForeground);
+        if(isForeground)
+        {
+            return;
+        }
 
         RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
         bundle.putBoolean("foreground", isForeground);
@@ -141,7 +147,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             jsDelivery.notifyRemoteFetch(bundle);
         }
 
-        Log.v(LOG_TAG, "handleRemotePushNotification bundle: " + bundle);
+        System.out.println("handleRemotePushNotification bundle: " + bundle);
         putPushMessageToRNSharedPreferences(context, bundle);
 
         Application applicationContext = (Application) context.getApplicationContext();
@@ -160,6 +166,8 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
 
         messageMap.put("sender_name", message.substring(0, indexOfSep));
         messageMap.put("message", message.substring(indexOfSep + 1));
+
+        System.out.println("[parseSenderName] " + message);
 
         return messageMap;
     }

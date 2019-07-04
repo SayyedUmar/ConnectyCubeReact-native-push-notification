@@ -22,6 +22,7 @@ public class RNPushNotificationsMessages {
 
   public boolean addMessage(String dialog_id, RNPushNotificationMessage message)
   {
+    System.out.println("[addMessage][called]");
     if (messageHashMap.get(dialog_id) == null)
     {
       ArrayList<RNPushNotificationMessage> newMessageInDialog = new ArrayList<RNPushNotificationMessage>();
@@ -30,6 +31,7 @@ public class RNPushNotificationsMessages {
       messageHashMap.put(dialog_id, newMessageInDialog);
       countOfmessage++;
       System.out.println(messageHashMap);
+      System.out.println("[addMessage][called]");
       return true;
     } else {
       // check double messages message_id
@@ -37,8 +39,10 @@ public class RNPushNotificationsMessages {
 
       for(int i = 0; i < existingMessages.size(); i++)
       {
-        if (existingMessages.get(i).message_id == message.message_id)
+        System.out.println("[addMessage][isEquals] " + existingMessages.get(i).message_id + " " + message.message_id);
+        if (existingMessages.get(i).message_id.equals(message.message_id))
         {
+          System.out.println("[addMessage][isEquals][TRUE]");
           return false;
         }
       }

@@ -152,16 +152,6 @@ public class RNPushNotificationHelper {
 
     public void sendToGroupNotifications(Bundle bundle)
     {
-        System.out.println("[Version]");
-        System.out.println(Build.VERSION.SDK_INT);
-        System.out.println(Build.VERSION_CODES.O);
-
-        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
-        {
-            sendToNotificationCentre(bundle);
-            return;
-        }
-
       System.out.println("[sendToGroupNotifications][arguments]");
       System.out.println(bundle);
 
@@ -210,6 +200,16 @@ public class RNPushNotificationHelper {
           boolean success = hashMapDialogsToMessages.addMessage(dialog_id, new RNPushNotificationMessage(notificationID, sender_id, sender, message_id, message));
           if(!success)
           {
+              return;
+          }
+
+          System.out.println("[Version]");
+          System.out.println(Build.VERSION.SDK_INT);
+          System.out.println(Build.VERSION_CODES.O);
+
+          if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+          {
+              sendToNotificationCentre(bundle);
               return;
           }
 

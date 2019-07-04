@@ -20,7 +20,7 @@ public class RNPushNotificationsMessages {
     messageHashMap.clear();
   }
 
-  public void addMessage(String dialog_id, RNPushNotificationMessage message)
+  public boolean addMessage(String dialog_id, RNPushNotificationMessage message)
   {
     if (messageHashMap.get(dialog_id) == null)
     {
@@ -28,12 +28,26 @@ public class RNPushNotificationsMessages {
       newMessageInDialog.add(message);
 
       messageHashMap.put(dialog_id, newMessageInDialog);
+      countOfmessage++;
+      System.out.println(messageHashMap);
+      return true;
     } else {
-      messageHashMap.get(dialog_id).add(message);
-    }
+      // check double messages message_id
+      ArrayList<RNPushNotificationMessage> existingMessages = messageHashMap.get(dialog_id);
 
-    countOfmessage++;
-    System.out.println(messageHashMap);
+      for(int i = 0; i < existingMessages.size(); i++)
+      {
+        if (existingMessages.get(i).message_id == message.message_id)
+        {
+          return false;
+        }
+      }
+
+      messageHashMap.get(dialog_id).add(message);
+      countOfmessage++;
+      System.out.println(messageHashMap);
+      return true;
+    }
   }
 
   public void deleteMessage(String dialog_id, String message_id)

@@ -207,7 +207,11 @@ public class RNPushNotificationHelper {
 
           int notificationID = Integer.parseInt(notificationIdString);
 
-          hashMapDialogsToMessages.addMessage(dialog_id, new RNPushNotificationMessage(notificationID, sender_id, sender, message_id, message));
+          boolean success = hashMapDialogsToMessages.addMessage(dialog_id, new RNPushNotificationMessage(notificationID, sender_id, sender, message_id, message));
+          if(!success)
+          {
+              return;
+          }
 
         Resources res = context.getResources();
         String packageName = context.getPackageName();

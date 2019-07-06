@@ -9,7 +9,7 @@ var RNNotificationsComponent = require( './component' );
 var AppState = RNNotificationsComponent.state;
 var RNNotifications = RNNotificationsComponent.component;
 
-var Platform = require('react-native').Platform;
+const { Platform, AppRegistry } = require('react-native')
 
 var Notifications = {
 	handler: RNNotifications,
@@ -159,6 +159,13 @@ Notifications.createGroupNotification = function(details: Object) {
 	}
 }
 
+Notifications.registerBackgroundTask = function(taskName, taskFunction) {
+  if (Platform.OS == 'android') {
+    console.log('[Notifications.registerBackgroundTask]', taskName, taskFunction)
+    AppRegistry.registerHeadlessTask(taskName, taskFunction)
+    this.handler.registerBackgroundTask(taskName)
+  }
+}
 
 /**
  * Local Notifications Schedule

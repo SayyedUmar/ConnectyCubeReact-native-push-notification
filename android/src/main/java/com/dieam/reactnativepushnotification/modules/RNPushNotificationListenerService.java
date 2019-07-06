@@ -1,12 +1,9 @@
 package com.dieam.reactnativepushnotification.modules;
 
-import java.util.Map;
-import com.google.firebase.messaging.FirebaseMessagingService;
-import com.google.firebase.messaging.RemoteMessage;
-
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.Application;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,12 +14,15 @@ import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
 
-import org.json.JSONObject;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import in.sriraman.sharedpreferences.RNSharedPreferencesModule;
@@ -33,7 +33,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
-        String from = message.getFrom();
+        String from = message.getFrom(); // it is from ... (need help)
         RemoteMessage.Notification remoteNotification = message.getNotification();
 
         final Bundle bundle = new Bundle();
@@ -81,6 +81,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         bundle.putString("sender", messageMap.get("sender_name"));
         bundle.putString("message", messageMap.get("message"));
         bundle.putString("sender_id", bundle.getString("user_id"));
+        bundle.putInt("date_sent", (int)Math.floor(System.currentTimeMillis() / 1000));
 
         System.out.println("[onMessageReceived] bundle: " + bundle);
 
@@ -151,8 +152,16 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         putPushMessageToRNSharedPreferences(context, bundle);
 
         Application applicationContext = (Application) context.getApplicationContext();
-        RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
-        pushNotificationHelper.sendToGroupNotifications(bundle);
+
+        /** JS TASK **/
+
+        Intent service = new Intent(applicationContext, JSPushNotificationTask.class);
+        service.putExtras(bundle);
+        applicationContext.startService(service);
+
+        System.out.println("[JSPushNotificationTask] " + bundle);
+
+        return;
     }
 
     private HashMap<String, String> parseSenderName(String message)
@@ -164,7 +173,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         senderName = senderName.replace(" in Private dialog", "");
         senderName = senderName + ":";
 
-        messageMap.put("sender_name", message.substring(0, indexOfSep));
+        messageMap.put("sender_name", senderName);
         messageMap.put("message", message.substring(indexOfSep + 1));
 
         System.out.println("[parseSenderName] " + message);
@@ -184,11 +193,13 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         try {
             message_id = pushMessageBundle.getString("message_id");
 
-            jsonMessage.put("id", message_id);
+            jsonMessage.put("message_id", message_id);
             jsonMessage.put("dialog_id", pushMessageBundle.getString("dialog_id"));
             jsonMessage.put("sender_id", pushMessageBundle.getString("user_id"));
-            jsonMessage.put("body", pushMessageBundle.getString("message"));
-            jsonMessage.put("date_sent", Math.floor(System.currentTimeMillis() / 1000));
+            jsonMessage.put("message", pushMessageBundle.getString("message"));
+            jsonMessage.put("date_sent", pushMessageBundle.getInt("date_sent"));
+            jsonMessage.put("sender", pushMessageBundle.getString("sender"));
+            jsonMessage.put("title", pushMessageBundle.getString("title"));
         } catch (JSONException e) {
             e.printStackTrace();
         }

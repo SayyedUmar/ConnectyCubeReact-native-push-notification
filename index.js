@@ -9,7 +9,7 @@ var RNNotificationsComponent = require( './component' );
 var AppState = RNNotificationsComponent.state;
 var RNNotifications = RNNotificationsComponent.component;
 
-var Platform = require('react-native').Platform;
+const { Platform, AppRegistry } = require('react-native')
 
 var Notifications = {
 	handler: RNNotifications,
@@ -147,6 +147,25 @@ Notifications.localNotification = function(details: Object) {
 		this.handler.presentLocalNotification(details);
 	}
 };
+
+/* ConnectyCube Group notifications */
+
+Notifications.createGroupNotification = function(details: Object) {
+	if (Platform.OS === 'android') {
+		//console.log('[RNLocalNotifications][params][index]', details)
+		this.handler.createGroupNotification(details)
+	} else {
+		Notifications.localNotification(details)
+	}
+}
+
+Notifications.registerBackgroundTask = function(taskName, taskFunction) {
+  if (Platform.OS == 'android') {
+    console.log('[Notifications.registerBackgroundTask]', taskName, taskFunction)
+    AppRegistry.registerHeadlessTask(taskName, taskFunction)
+    this.handler.registerBackgroundTask(taskName)
+  }
+}
 
 /**
  * Local Notifications Schedule

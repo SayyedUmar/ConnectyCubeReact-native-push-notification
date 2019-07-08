@@ -3,6 +3,7 @@
 var {
   NativeModules,
   DeviceEventEmitter,
+  AppRegistry
 } = require('react-native');
 
 var RNPushNotification = NativeModules.RNPushNotification;
@@ -49,6 +50,18 @@ NotificationsComponent.prototype.cancelAllLocalNotifications = function() {
 NotificationsComponent.prototype.presentLocalNotification = function(details: Object) {
 	RNPushNotification.presentLocalNotification(details);
 };
+
+/** ConnectyCube Group Notifications */
+
+NotificationsComponent.prototype.createGroupNotification = function(details: Object) {
+	//console.log('[RNLocalNotifications][params][index.android]', details)
+	RNPushNotification.createGroupNotification(details);
+};
+
+NotificationsComponent.prototype.registerBackgroundTask = function(taskName) {
+  console.log('[Notifications.registerBackgroundTask][index.android]', taskName)
+  RNPushNotification.registerBackgroundTask(taskName)
+}
 
 NotificationsComponent.prototype.scheduleLocalNotification = function(details: Object) {
 	RNPushNotification.scheduleLocalNotification(details);

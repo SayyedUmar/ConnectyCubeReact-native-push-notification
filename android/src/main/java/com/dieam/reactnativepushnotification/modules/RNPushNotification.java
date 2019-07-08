@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.app.NotificationManagerCompat;
+import android.util.Log;
 
 import com.dieam.reactnativepushnotification.helpers.ApplicationBadgeHelper;
 import com.facebook.react.bridge.ActivityEventListener;
@@ -21,14 +22,11 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-
-import android.util.Log;
-
-import com.google.firebase.messaging.FirebaseMessaging;
 
 public class RNPushNotification extends ReactContextBaseJavaModule implements ActivityEventListener {
     public static final String LOG_TAG = "RNPushNotification";// all logging should use this tag
@@ -144,6 +142,28 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     @ReactMethod
     public void subscribeToTopic(String topic) {
         FirebaseMessaging.getInstance().subscribeToTopic(topic);
+    }
+
+    /** ConnectyCube Group Notifications **/
+
+    @ReactMethod
+    public void createGroupNotification(ReadableMap details) {
+      Bundle bundle = Arguments.toBundle(details);
+      // If notification ID is not provided by the user, generate one at random
+      if (bundle.getString("id") == null) {
+        bundle.putString("id", String.valueOf(mRandomNumberGenerator.nextInt()));
+      }
+
+      mRNPushNotificationHelper.sendToGroupNotifications(bundle);
+
+      System.out.println("[createGroupNotification][arguments]");
+      System.out.println(bundle);
+    }
+
+    @ReactMethod
+    public void registerBackgroundTask(String taskName) {
+        System.out.println("[registerBackgroundTask][arguments] " + taskName);
+        JSPushNotificationTask.setTaskName(taskName);
     }
 
     @ReactMethod

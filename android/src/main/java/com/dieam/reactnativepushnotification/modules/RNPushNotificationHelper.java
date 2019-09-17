@@ -19,8 +19,9 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
 
 import com.facebook.react.bridge.ReadableMap;
 
@@ -483,7 +484,7 @@ public class RNPushNotificationHelper {
                     .setTicker(bundle.getString("ticker"))
                     .setVisibility(visibility)
                     .setPriority(priority)
-                    .setAutoCancel(bundle.getBoolean("autoCancel", true));
+                    .setAutoCancel(true);
 
             String group = bundle.getString("group");
             if (group != null) {
@@ -610,6 +611,7 @@ public class RNPushNotificationHelper {
             JSONArray actionsArray = null;
             try {
                 actionsArray = bundle.getString("actions") != null ? new JSONArray(bundle.getString("actions")) : null;
+                Log.d(LOG_TAG, "[Actions]: " + actionsArray);
             } catch (JSONException e) {
                 Log.e(LOG_TAG, "Exception while converting actions to JSON object.", e);
             }
@@ -628,15 +630,18 @@ public class RNPushNotificationHelper {
                         continue;
                     }
 
-                    Intent actionIntent = new Intent(context, intentClass);
+                    Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
                     actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     actionIntent.setAction(context.getPackageName() + "." + action);
 
+                    System.out.println("[Action Bundle]: " + bundle);
+
                     // Add "action" for later identifying which button gets pressed.
                     bundle.putString("action", action);
-                    actionIntent.putExtra("notification", bundle);
-
-                    PendingIntent pendingActionIntent = PendingIntent.getActivity(context, notificationID, actionIntent,
+                    bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.MARK_AS_READ_TASK_KEY);
+                    actionIntent.putExtras(bundle);
+                    int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
+                    PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT);
                     notification.addAction(icon, action, pendingActionIntent);
                 }

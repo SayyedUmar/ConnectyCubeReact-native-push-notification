@@ -8,8 +8,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
+
+import androidx.core.app.NotificationManagerCompat;
 
 import com.dieam.reactnativepushnotification.helpers.ApplicationBadgeHelper;
 import com.facebook.react.bridge.ActivityEventListener;
@@ -161,9 +162,21 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
-    public void registerBackgroundTask(String taskName) {
-        System.out.println("[registerBackgroundTask][arguments] " + taskName);
-        JSPushNotificationTask.setTaskName(taskName);
+    public void registerBackgroundTaskNotify(String taskName) {
+        System.out.println("[registerBackgroundTaskNotify][arguments] " + taskName);
+        JSPushNotificationTask.setNotifyTaskName(taskName);
+    }
+
+    @ReactMethod
+    public void registerBackgroundTaskMarkAsRead(String taskName) {
+        System.out.println("[registerBackgroundTaskMarkAsRead][arguments] " + taskName);
+        JSPushNotificationTask.setMarkAsReadTaskName(taskName);
+    }
+
+    @ReactMethod
+    public void registerBackgroundTasReply(String taskName) {
+        System.out.println("[registerBackgroundTasReply][arguments] " + taskName);
+        JSPushNotificationTask.setRelyTaskName(taskName);
     }
 
     @ReactMethod
@@ -249,6 +262,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
      * Clear notification from the notification centre.
      */
     public void clearLocalNotification(int notificationID) {
+        Log.d("clearNotification: ", notificationID + "");
         mRNPushNotificationHelper.clearNotification(notificationID);
     }
 

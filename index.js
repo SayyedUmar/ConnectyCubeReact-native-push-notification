@@ -26,7 +26,13 @@ var Notifications = {
 		alert: true,
 		badge: true,
 		sound: true
-	}
+  },
+
+  JS_BACKGROUND_TASKS_KEYS: {
+    NOTIFY: 'NOTIFY_TAKS_NAME',
+    MARK_AS_READ: 'MARK_AS_READ_TAKS_NAME',
+    REPLY: 'REPLY_TAKS_NAME'
+  }
 };
 
 Notifications.callNative = function(name: String, params: Array) {
@@ -161,9 +167,15 @@ Notifications.createGroupNotification = function(details: Object) {
 
 Notifications.registerBackgroundTask = function(taskName, taskFunction) {
   if (Platform.OS == 'android') {
-    console.log('[Notifications.registerBackgroundTask]', taskName, taskFunction)
+    console.log('[Notifications][registerBackgroundTask]', taskName, taskFunction)
     AppRegistry.registerHeadlessTask(taskName, taskFunction)
-    this.handler.registerBackgroundTask(taskName)
+    if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.NOTIFY) {
+      this.handler.registerBackgroundTaskNotify(taskName)
+    } else if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.MARK_AS_READ) {
+      this.handler.registerBackgroundTaskMarkAsRead(taskName)
+    } else if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.REPLY) {
+      this.handler.registerBackgroundTasReply(taskName)
+    }
   }
 }
 

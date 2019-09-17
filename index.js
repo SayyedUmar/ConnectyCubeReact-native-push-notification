@@ -156,6 +156,14 @@ Notifications.localNotification = function(details: Object) {
 
 /* ConnectyCube Group notifications */
 
+Notifications.createMessageNotification = function(details: Object) {
+	if (Platform.OS === 'android') {
+		this.handler.createMessageNotification(details)
+	} else {
+		Notifications.localNotification(details)
+	}
+}
+
 Notifications.createGroupNotification = function(details: Object) {
 	if (Platform.OS === 'android') {
 		//console.log('[RNLocalNotifications][params][index]', details)

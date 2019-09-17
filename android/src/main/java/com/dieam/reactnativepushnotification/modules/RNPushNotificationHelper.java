@@ -28,6 +28,7 @@ import com.facebook.react.bridge.ReadableMap;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import static com.dieam.reactnativepushnotification.modules.RNPushNotification.LOG_TAG;
@@ -42,6 +43,7 @@ public class RNPushNotificationHelper {
     public static final String CLEAR_MESSAGE = "CLEAR_MESSAGE";
     public static final String NOTIFICATION_BUNDLE = "notification";
     public static final String DELETE_MESSAGE = "DELETE_MESSAGE";
+    public static final String MESSAGING_STYLE_TEXT = "ConnecttCube";
 
     private static final RNPushNotificationsMessages hashMapDialogsToMessages = new RNPushNotificationsMessages();
 
@@ -148,6 +150,181 @@ public class RNPushNotificationHelper {
             getAlarmManager().setExact(AlarmManager.RTC_WAKEUP, fireDate, pendingIntent);
         } else {
             getAlarmManager().set(AlarmManager.RTC_WAKEUP, fireDate, pendingIntent);
+        }
+    }
+    public void sendToMessagingNotificatios(Bundle bundle) {
+        System.out.println("[sendToMessagingNotificatios][arguments]");
+        System.out.println(bundle);
+
+        try {
+            Class intentClass = getMainActivityClass();
+            if (intentClass == null) {
+                Log.e(LOG_TAG, "No activity class found for the notification");
+                return;
+            }
+
+            int notificationID = bundle.getInt("intID");
+            String notificationMessageLine = null;
+
+            System.out.println("[sendToGroupNotifications][id]: " + notificationID);
+
+            String conversationTitle = bundle.getString("dialog");
+            String messageTextBody = bundle.getString("message");
+            boolean isPrivateDialog = bundle.getBoolean("is_private");
+            if (!isPrivateDialog) {
+                String senderName = bundle.getString("sender");
+                notificationMessageLine = senderName + ": " + messageTextBody.trim();
+            } else {
+                notificationMessageLine = messageTextBody.trim();
+            }
+
+            ArrayList<String> allMessages = RNPushNotificationMessageLine.addLineToNotification(notificationID, notificationMessageLine);
+
+            NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
+
+            NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(MESSAGING_STYLE_TEXT);
+
+            if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.O) {
+                messagingStyle.setConversationTitle(conversationTitle + "setConversationTitle");
+            }
+
+            for(String messageTextLine : allMessages) {
+                messagingStyle.addMessage(messageTextLine, 0, conversationTitle + "addMessage");
+            }
+
+            notificationBuilder
+                    .setContentTitle(conversationTitle + "setContentTitle")
+                    .setContentText(conversationTitle + "setContentText")
+                    .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                    .setStyle(messagingStyle)
+                    .setAutoCancel(true)
+                    .setShowWhen(true)
+                    .setGroup(conversationTitle)
+                    .setPriority(NotificationCompat.PRIORITY_MAX);
+
+            Resources res = context.getResources();
+            String packageName = context.getPackageName();
+
+            if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
+                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                String soundName = bundle.getString("soundName");
+                if (soundName != null) {
+                    if (!"default".equalsIgnoreCase(soundName)) {
+
+                        // sound name can be full filename, or just the resource name.
+                        // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
+                        // The reason is to make the iOS and android javascript interfaces compatible
+
+                        int resId;
+                        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
+                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+                        } else {
+                            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
+                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+                        }
+
+                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
+                    }
+                }
+                notificationBuilder.setSound(soundUri);
+            }
+
+            String largeIcon = bundle.getString("largeIcon");
+
+            String numberString = bundle.getString("number", hashMapDialogsToMessages.getCountOfMessage() + "");
+            if (numberString != null) {
+                notificationBuilder.setNumber(Integer.parseInt(numberString));
+            }
+
+            int smallIconResId;
+            int largeIconResId;
+
+            String smallIcon = bundle.getString("smallIcon");
+
+            if (smallIcon != null) {
+                smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
+            } else {
+                smallIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (smallIconResId == 0) {
+                smallIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (smallIconResId == 0) {
+                    smallIconResId = android.R.drawable.ic_dialog_info;
+                }
+            }
+
+            if (largeIcon != null) {
+                largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
+            } else {
+                largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+            }
+
+            Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);
+
+            if (largeIconResId != 0 && (largeIcon != null || Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)) {
+                notificationBuilder.setLargeIcon(largeIconBitmap);
+            }
+
+            notificationBuilder.setSmallIcon(smallIconResId);
+
+            if (!bundle.containsKey("vibrate") || bundle.getBoolean("vibrate")) {
+                long vibration = bundle.containsKey("vibration") ? (long) bundle.getDouble("vibration") : DEFAULT_VIBRATION;
+                if (vibration == 0)
+                    vibration = DEFAULT_VIBRATION;
+                notificationBuilder.setVibrate(new long[]{0, vibration});
+            }
+
+            JSONArray actionsArray = null;
+            try {
+                actionsArray = bundle.getString("actions") != null ? new JSONArray(bundle.getString("actions")) : null;
+                Log.d(LOG_TAG, "[Actions]: " + actionsArray);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Exception while converting actions to JSON object.", e);
+            }
+
+            if (actionsArray != null) {
+                // No icon for now. The icon value of 0 shows no icon.
+                int icon = 0;
+
+                // Add button for each actions.
+                for (int i = 0; i < actionsArray.length(); i++) {
+                    String action;
+                    try {
+                        action = actionsArray.getString(i);
+                    } catch (JSONException e) {
+                        Log.e(LOG_TAG, "Exception while getting action from actionsArray.", e);
+                        continue;
+                    }
+
+                    Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                    actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    actionIntent.setAction(context.getPackageName() + "." + action);
+
+                    System.out.println("[Action Bundle]: " + bundle);
+
+                    // Add "action" for later identifying which button gets pressed.
+                    bundle.putString("action", action);
+                    bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.MARK_AS_READ_TASK_KEY);
+                    actionIntent.putExtras(bundle);
+                    int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
+                    PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT);
+                    notificationBuilder.addAction(icon, action, pendingActionIntent);
+                }
+            }
+
+            NotificationManager notificationManager = notificationManager();
+            checkOrCreateChannel(notificationManager);
+
+            Notification notification = notificationBuilder.build();
+
+            notificationManager.notify(notificationID, notification);
+
+
+        }  catch (Exception e) {
+            Log.e(LOG_TAG, "failed to send push notification", e);
         }
     }
 
@@ -345,6 +522,44 @@ public class RNPushNotificationHelper {
           notification.setVibrate(new long[]{0, vibration});
         }
 
+          JSONArray actionsArray = null;
+          try {
+              actionsArray = bundle.getString("actions") != null ? new JSONArray(bundle.getString("actions")) : null;
+              Log.d(LOG_TAG, "[Actions]: " + actionsArray);
+          } catch (JSONException e) {
+              Log.e(LOG_TAG, "Exception while converting actions to JSON object.", e);
+          }
+
+          if (actionsArray != null) {
+              // No icon for now. The icon value of 0 shows no icon.
+              int icon = 0;
+
+              // Add button for each actions.
+              for (int i = 0; i < actionsArray.length(); i++) {
+                  String action;
+                  try {
+                      action = actionsArray.getString(i);
+                  } catch (JSONException e) {
+                      Log.e(LOG_TAG, "Exception while getting action from actionsArray.", e);
+                      continue;
+                  }
+
+                  Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                  actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                  actionIntent.setAction(context.getPackageName() + "." + action);
+
+                  System.out.println("[Action Bundle]: " + bundle);
+
+                  // Add "action" for later identifying which button gets pressed.
+                  bundle.putString("action", action);
+                  bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.MARK_AS_READ_TASK_KEY);
+                  actionIntent.putExtras(bundle);
+                  int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
+                  PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
+                          PendingIntent.FLAG_UPDATE_CURRENT);
+                  notification.addAction(icon, action, pendingActionIntent);
+              }
+          }
 
         // Remove the notification from the shared preferences once it has been shown
         // to avoid showing the notification again when the phone is rebooted. If the

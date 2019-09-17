@@ -148,6 +148,19 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     /** ConnectyCube Group Notifications **/
 
     @ReactMethod
+    public void createMessageNotification(ReadableMap details) {
+        Bundle bundle = Arguments.toBundle(details);
+        // If notification ID is not provided by the user, generate one at random
+        if (bundle.getString("id") == null) {
+            bundle.putInt("intID", bundle.getString("dialog_id").hashCode());
+        } else {
+            bundle.putInt("intID", Integer.parseInt(bundle.getString("id")));
+        }
+
+        mRNPushNotificationHelper.sendToMessagingNotificatios(bundle);
+    }
+
+    @ReactMethod
     public void createGroupNotification(ReadableMap details) {
       Bundle bundle = Arguments.toBundle(details);
       // If notification ID is not provided by the user, generate one at random

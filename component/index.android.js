@@ -54,7 +54,7 @@ NotificationsComponent.prototype.presentLocalNotification = function(details: Ob
 /** ConnectyCube Group Notifications */
 
 NotificationsComponent.prototype.createMessageNotification = function(details: Object) {
-	//console.log('[RNLocalNotifications][params][index.android]', details)
+	console.log('[RNLocalNotifications][params][index.android]', details)
 	RNPushNotification.createMessageNotification(details);
 };
 

@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.RemoteInput;
 
 import com.facebook.react.bridge.ReadableMap;
 
@@ -192,6 +193,8 @@ public class RNPushNotificationHelper {
                 messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
 
+            int greedColor = Color.argb(255, 1, 117, 37);
+
             notificationBuilder
                     .setContentTitle(dialog)
                     .setContentText(dialog)
@@ -200,6 +203,7 @@ public class RNPushNotificationHelper {
                     .setAutoCancel(true)
                     .setShowWhen(true)
                     .setGroup(dialog)
+                    .setColor(greedColor)
                     .setPriority(NotificationCompat.PRIORITY_MAX);
 
             Resources res = context.getResources();
@@ -290,7 +294,7 @@ public class RNPushNotificationHelper {
                     actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     actionIntent.setAction(context.getPackageName() + "." + actionName);
 
-                    System.out.println("[Action Bundle]: " + actionBundle);
+                    System.out.println("[Action Bundle] " + actionBundle);
 
                     // Add "action" for later identifying which button gets pressed.
                     actionBundle.putString("action", actionName);
@@ -299,7 +303,22 @@ public class RNPushNotificationHelper {
                     int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
                     PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT);
-                    notificationBuilder.addAction(icon, actionName, pendingActionIntent);
+                    if (jsBgTaskName.equals(JSPushNotificationTask.REPLY_TASK_KEY)) {
+                        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+                        {
+                            return;
+                        }
+                        NotificationCompat.Action actionReply = new NotificationCompat.Action.Builder(
+                                icon, actionName, pendingActionIntent)
+                                .addRemoteInput(new RemoteInput.Builder(JSPushNotificationTask.REPLY_INPUT_KEY)
+                                        .setLabel("Type your message")
+                                        .build())
+                                .setAllowGeneratedReplies(true)
+                                .build();
+                        notificationBuilder.addAction(actionReply);
+                    } else {
+                        notificationBuilder.addAction(icon, actionName, pendingActionIntent);
+                    }
                 }
             }
 

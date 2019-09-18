@@ -185,7 +185,10 @@ public class RNPushNotificationHelper {
                 messagingStyle.addMessage("", 0, dialog + "(" + allMessages.size() + " new messages)");
             }
 
+            ArrayList<String> message_ids = new ArrayList<>();
+
             for(Bundle messageBundle : allMessages) {
+                message_ids.add(messageBundle.getString("message_id"));
                 messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
 
@@ -273,42 +276,30 @@ public class RNPushNotificationHelper {
                 notificationBuilder.setVibrate(new long[]{0, vibration});
             }
 
-            JSONArray actionsArray = null;
-            try {
-                actionsArray = bundle.getString("actions") != null ? new JSONArray(bundle.getString("actions")) : null;
-                Log.d(LOG_TAG, "[Actions]: " + actionsArray);
-            } catch (JSONException e) {
-                Log.e(LOG_TAG, "Exception while converting actions to JSON object.", e);
-            }
+            Bundle actionsBundle = bundle.getBundle("actions");
+            Bundle actionBundle = new Bundle(bundle);
+            actionBundle.putStringArrayList("message_ids", message_ids);
 
-            if (actionsArray != null) {
+            if (actionsBundle != null) {
                 // No icon for now. The icon value of 0 shows no icon.
                 int icon = 0;
-
-                // Add button for each actions.
-                for (int i = 0; i < actionsArray.length(); i++) {
-                    String action;
-                    try {
-                        action = actionsArray.getString(i);
-                    } catch (JSONException e) {
-                        Log.e(LOG_TAG, "Exception while getting action from actionsArray.", e);
-                        continue;
-                    }
+                for (String actionName : actionsBundle.keySet()) {
+                    String jsBgTaskName = actionsBundle.getString(actionName);
 
                     Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
                     actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    actionIntent.setAction(context.getPackageName() + "." + action);
+                    actionIntent.setAction(context.getPackageName() + "." + actionName);
 
-                    System.out.println("[Action Bundle]: " + bundle);
+                    System.out.println("[Action Bundle]: " + actionBundle);
 
                     // Add "action" for later identifying which button gets pressed.
-                    bundle.putString("action", action);
-                    bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.MARK_AS_READ_TASK_KEY);
-                    actionIntent.putExtras(bundle);
+                    actionBundle.putString("action", actionName);
+                    actionBundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, jsBgTaskName);
+                    actionIntent.putExtras(actionBundle);
                     int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
                     PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT);
-                    notificationBuilder.addAction(icon, action, pendingActionIntent);
+                    notificationBuilder.addAction(icon, actionName, pendingActionIntent);
                 }
             }
 

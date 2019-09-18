@@ -152,9 +152,10 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
         Bundle bundle = Arguments.toBundle(details);
         // If notification ID is not provided by the user, generate one at random
         if (bundle.getString("id") == null) {
-            bundle.putInt("intID", bundle.getString("dialog_id").hashCode());
+            bundle.putInt("notificationID", bundle.getString("dialog_id").hashCode());
         } else {
-            bundle.putInt("intID", Integer.parseInt(bundle.getString("id")));
+            bundle.putInt("notificationID", Integer.parseInt(bundle.getString("id")));
+            bundle.remove("id");
         }
 
         mRNPushNotificationHelper.sendToMessagingNotificatios(bundle);
@@ -277,6 +278,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     public void clearLocalNotification(int notificationID) {
         Log.d("clearNotification: ", notificationID + "");
         mRNPushNotificationHelper.clearNotification(notificationID);
+        RNPushNotificationMessageLine.clear(notificationID);
     }
 
     @ReactMethod

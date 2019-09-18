@@ -43,7 +43,7 @@ public class RNPushNotificationHelper {
     public static final String CLEAR_MESSAGE = "CLEAR_MESSAGE";
     public static final String NOTIFICATION_BUNDLE = "notification";
     public static final String DELETE_MESSAGE = "DELETE_MESSAGE";
-    public static final String MESSAGING_STYLE_TEXT = "ConnecttCube";
+    public static final String MESSAGING_STYLE_TEXT = "";
 
     private static final RNPushNotificationsMessages hashMapDialogsToMessages = new RNPushNotificationsMessages();
 
@@ -163,43 +163,40 @@ public class RNPushNotificationHelper {
                 return;
             }
 
-            int notificationID = bundle.getInt("intID");
-            String notificationMessageLine = null;
+            int notificationID = bundle.getInt("notificationID");
 
-            System.out.println("[sendToGroupNotifications][id]: " + notificationID);
+            System.out.println("[sendToMessagingNotificatios][id]: " + notificationID);
 
-            String conversationTitle = bundle.getString("dialog");
-            String messageTextBody = bundle.getString("message");
             boolean isPrivateDialog = bundle.getBoolean("is_private");
-            if (!isPrivateDialog) {
-                String senderName = bundle.getString("sender");
-                notificationMessageLine = senderName + ": " + messageTextBody.trim();
-            } else {
-                notificationMessageLine = messageTextBody.trim();
-            }
+            String dialog = bundle.getString("dialog");
 
-            ArrayList<String> allMessages = RNPushNotificationMessageLine.addLineToNotification(notificationID, notificationMessageLine);
+
+            ArrayList<Bundle> allMessages = RNPushNotificationMessageLine.addLineToNotification(notificationID, bundle);
 
             NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
 
             NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(MESSAGING_STYLE_TEXT);
 
             if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.O) {
-                messagingStyle.setConversationTitle(conversationTitle + "setConversationTitle");
+                messagingStyle.setConversationTitle(dialog);
             }
 
-            for(String messageTextLine : allMessages) {
-                messagingStyle.addMessage(messageTextLine, 0, conversationTitle + "addMessage");
+            if (!isPrivateDialog) {
+                messagingStyle.addMessage("", 0, dialog + "(" + allMessages.size() + " new messages)");
+            }
+
+            for(Bundle messageBundle : allMessages) {
+                messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
 
             notificationBuilder
-                    .setContentTitle(conversationTitle + "setContentTitle")
-                    .setContentText(conversationTitle + "setContentText")
+                    .setContentTitle(dialog)
+                    .setContentText(dialog)
                     .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
                     .setStyle(messagingStyle)
                     .setAutoCancel(true)
                     .setShowWhen(true)
-                    .setGroup(conversationTitle)
+                    .setGroup(dialog)
                     .setPriority(NotificationCompat.PRIORITY_MAX);
 
             Resources res = context.getResources();
@@ -314,6 +311,27 @@ public class RNPushNotificationHelper {
                     notificationBuilder.addAction(icon, action, pendingActionIntent);
                 }
             }
+
+            Log.d("[NID]", "" + notificationID);
+            System.out.println("[IntentBundle]: " + bundle);
+
+            bundle.putBoolean("userInteraction", true);
+
+            Intent intent = new Intent(context, intentClass);
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra(DELETE_MESSAGE, true);
+            intent.putExtra(NOTIFICATION_BUNDLE, bundle);
+            int pandingIntentId = bundle.getString("message_id").hashCode();
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            notificationBuilder.setContentIntent(pendingIntent);
+
+            Intent intentDeleteNotification = new Intent(context, DeleteNotification.class);
+            intentDeleteNotification.putExtra(DELETE_MESSAGE, true);
+            intentDeleteNotification.putExtra(NOTIFICATION_BUNDLE, bundle);
+            PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, pandingIntentId, intentDeleteNotification, 0);
+
+            notificationBuilder.setDeleteIntent(pendingIntentDeleteNotification);
 
             NotificationManager notificationManager = notificationManager();
             checkOrCreateChannel(notificationManager);

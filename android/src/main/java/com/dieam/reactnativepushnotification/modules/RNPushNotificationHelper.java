@@ -165,6 +165,12 @@ public class RNPushNotificationHelper {
             }
 
             int notificationID = bundle.getInt("notificationID");
+            String message_id = bundle.getString("message_id");
+
+            if (message_id != null && RNPushNotificationMessageLine.isReceived(message_id)) {
+                System.out.println("[sendToMessagingNotificatios][isExists]: " + message_id);
+                return;
+            }
 
             System.out.println("[sendToMessagingNotificatios][id]: " + notificationID);
 
@@ -284,7 +290,7 @@ public class RNPushNotificationHelper {
             intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
             intent.putExtra(DELETE_MESSAGE, true);
             intent.putExtra(NOTIFICATION_BUNDLE, bundle);
-            int pandingIntentId = bundle.getString("message_id").hashCode();
+            int pandingIntentId = message_id.hashCode();
             PendingIntent pendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
             notificationBuilder.setContentIntent(pendingIntent);

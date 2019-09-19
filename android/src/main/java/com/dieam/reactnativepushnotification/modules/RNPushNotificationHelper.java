@@ -280,6 +280,22 @@ public class RNPushNotificationHelper {
                 notificationBuilder.setVibrate(new long[]{0, vibration});
             }
 
+            Intent intent = new Intent(context, intentClass);
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra(DELETE_MESSAGE, true);
+            intent.putExtra(NOTIFICATION_BUNDLE, bundle);
+            int pandingIntentId = bundle.getString("message_id").hashCode();
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            notificationBuilder.setContentIntent(pendingIntent);
+
+            Intent intentDeleteNotification = new Intent(context, DeleteNotification.class);
+            intentDeleteNotification.putExtra(DELETE_MESSAGE, true);
+            intentDeleteNotification.putExtra(NOTIFICATION_BUNDLE, bundle);
+            PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, pandingIntentId, intentDeleteNotification, 0);
+
+            // notificationBuilder.setDeleteIntent(pendingIntentDeleteNotification);
+
             Bundle actionsBundle = bundle.getBundle("actions");
             Bundle actionBundle = new Bundle(bundle);
             actionBundle.putStringArrayList("message_ids", message_ids);
@@ -306,16 +322,20 @@ public class RNPushNotificationHelper {
                     if (jsBgTaskName.equals(JSPushNotificationTask.REPLY_TASK_KEY)) {
                         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
                         {
-                            return;
+                            NotificationCompat.Action actionReplyEmpty = new NotificationCompat.Action.Builder(
+                                    icon, actionName, pendingIntent) // just show activity
+                                    .build();
+                            notificationBuilder.addAction(actionReplyEmpty);
+                        } else {
+                            NotificationCompat.Action actionReply = new NotificationCompat.Action.Builder(
+                                    icon, actionName, pendingActionIntent)
+                                    .addRemoteInput(new RemoteInput.Builder(JSPushNotificationTask.REPLY_INPUT_KEY)
+                                            .setLabel("Type your message")
+                                            .build())
+                                    .setAllowGeneratedReplies(true)
+                                    .build();
+                            notificationBuilder.addAction(actionReply);
                         }
-                        NotificationCompat.Action actionReply = new NotificationCompat.Action.Builder(
-                                icon, actionName, pendingActionIntent)
-                                .addRemoteInput(new RemoteInput.Builder(JSPushNotificationTask.REPLY_INPUT_KEY)
-                                        .setLabel("Type your message")
-                                        .build())
-                                .setAllowGeneratedReplies(true)
-                                .build();
-                        notificationBuilder.addAction(actionReply);
                     } else {
                         notificationBuilder.addAction(icon, actionName, pendingActionIntent);
                     }
@@ -327,21 +347,6 @@ public class RNPushNotificationHelper {
 
             bundle.putBoolean("userInteraction", true);
 
-            Intent intent = new Intent(context, intentClass);
-            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            intent.putExtra(DELETE_MESSAGE, true);
-            intent.putExtra(NOTIFICATION_BUNDLE, bundle);
-            int pandingIntentId = bundle.getString("message_id").hashCode();
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            notificationBuilder.setContentIntent(pendingIntent);
-
-            Intent intentDeleteNotification = new Intent(context, DeleteNotification.class);
-            intentDeleteNotification.putExtra(DELETE_MESSAGE, true);
-            intentDeleteNotification.putExtra(NOTIFICATION_BUNDLE, bundle);
-            PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, pandingIntentId, intentDeleteNotification, 0);
-
-            notificationBuilder.setDeleteIntent(pendingIntentDeleteNotification);
 
             NotificationManager notificationManager = notificationManager();
             checkOrCreateChannel(notificationManager);

@@ -138,15 +138,16 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             return;
         }
 
-        RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
+        // RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
         bundle.putBoolean("foreground", isForeground);
         bundle.putBoolean("userInteraction", false);
-        jsDelivery.notifyNotification(bundle);
+        bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.NOTIFY_TASK_KEY);
+        // jsDelivery.notifyNotification(bundle);
 
         // If contentAvailable is set to true, then send out a remote fetch event
-        if (bundle.getString("contentAvailable", "false").equalsIgnoreCase("true")) {
-            jsDelivery.notifyRemoteFetch(bundle);
-        }
+//        if (bundle.getString("contentAvailable", "false").equalsIgnoreCase("true")) {
+//            jsDelivery.notifyRemoteFetch(bundle);
+//        }
 
         System.out.println("handleRemotePushNotification bundle: " + bundle);
         putPushMessageToRNSharedPreferences(context, bundle);

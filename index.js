@@ -26,7 +26,13 @@ var Notifications = {
 		alert: true,
 		badge: true,
 		sound: true
-	}
+  },
+
+  JS_BACKGROUND_TASKS_KEYS: {
+    NOTIFY: 'NOTIFY_TAKS_NAME',
+    MARK_AS_READ: 'MARK_AS_READ_TASK_KEY',
+    REPLY: 'REPLY_TASK_KEY'
+  }
 };
 
 Notifications.callNative = function(name: String, params: Array) {
@@ -150,6 +156,14 @@ Notifications.localNotification = function(details: Object) {
 
 /* ConnectyCube Group notifications */
 
+Notifications.createMessageNotification = function(details: Object) {
+	if (Platform.OS === 'android') {
+		this.handler.createMessageNotification(details)
+	} else {
+		Notifications.localNotification(details)
+	}
+}
+
 Notifications.createGroupNotification = function(details: Object) {
 	if (Platform.OS === 'android') {
 		//console.log('[RNLocalNotifications][params][index]', details)
@@ -161,9 +175,15 @@ Notifications.createGroupNotification = function(details: Object) {
 
 Notifications.registerBackgroundTask = function(taskName, taskFunction) {
   if (Platform.OS == 'android') {
-    console.log('[Notifications.registerBackgroundTask]', taskName, taskFunction)
+    console.log('[Notifications][registerBackgroundTask]', taskName, taskFunction)
     AppRegistry.registerHeadlessTask(taskName, taskFunction)
-    this.handler.registerBackgroundTask(taskName)
+    if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.NOTIFY) {
+      this.handler.registerBackgroundTaskNotify(taskName)
+    } else if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.MARK_AS_READ) {
+      this.handler.registerBackgroundTaskMarkAsRead(taskName)
+    } else if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.REPLY) {
+      this.handler.registerBackgroundTasReply(taskName)
+    }
   }
 }
 
@@ -313,6 +333,10 @@ Notifications.cancelLocalNotifications = function() {
 
 Notifications.clearLocalNotification = function() {
     return this.callNative('clearLocalNotification', arguments);
+};
+
+Notifications.clearLocalNotificationByString = function() {
+  return this.callNative('clearLocalNotificationByString', arguments);
 };
 
 Notifications.cancelAllLocalNotifications = function() {

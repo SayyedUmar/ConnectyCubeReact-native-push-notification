@@ -17,7 +17,6 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.jstasks.HeadlessJsTaskConfig;
 
-import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -28,6 +27,10 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
 
     static final String BUNDLE_TASK_NAME_KEY = "BUNDLE_TASK_NAME_KEY";
 
+    static final String START_CALL_TASK_KEY = "START_CALL_TASK_KEY";
+
+    static final String END_CALL_TASK_KEY = "END_CALL_TASK_KEY";
+
     static final String NOTIFY_TASK_KEY = "NOTIFY_TASK_KEY";
 
     static final String MARK_AS_READ_TASK_KEY = "MARK_AS_READ_TASK_KEY";
@@ -35,30 +38,6 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
     static final String REPLY_TASK_KEY = "REPLY_TASK_KEY";
 
     static final String REPLY_INPUT_KEY = "REPLY_INPUT_KEY";
-
-    static HashMap<String, String> taskNames = new HashMap<>();
-
-    static void setNotifyTaskName(String taskName) {
-        taskNames.put(NOTIFY_TASK_KEY, taskName);
-    }
-
-    static void setMarkAsReadTaskName(String taskName) {
-        taskNames.put(MARK_AS_READ_TASK_KEY, taskName);
-    }
-
-    static void setRelyTaskName(String taskName) {
-        taskNames.put(REPLY_TASK_KEY, taskName);
-    }
-
-    public String getTaskName(Bundle extras) {
-        String taskName = extras.getString(BUNDLE_TASK_NAME_KEY);
-        boolean isExists = taskName != null && taskNames.containsKey(taskName);
-        if (isExists) {
-            extras.remove(BUNDLE_TASK_NAME_KEY);
-            return taskNames.get(taskName);
-        }
-        return null;
-    }
 
     @Override
     protected @Nullable
@@ -72,15 +51,15 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
         }
 
         if (extras == null) return null;
-        String taskName = getTaskName(extras);
+        String taskName = extras.getString(BUNDLE_TASK_NAME_KEY);
         Log.d(TAG, "taskName: " + taskName);
         if (taskName == null) return null;
-        if (taskName.equals(taskNames.get(REPLY_TASK_KEY))) {
+        if (taskName.equals(REPLY_TASK_KEY)) {
             Bundle remoteInputBundle = RemoteInput.getResultsFromIntent(intent);
             extras.putString("reply_message_text", remoteInputBundle.getString(REPLY_INPUT_KEY));
         }
         if (this.isApplicationInForeground()) {
-            if (taskName.equals(taskNames.get(MARK_AS_READ_TASK_KEY)) || taskName.equals(taskNames.get(REPLY_TASK_KEY))) {
+            if (taskName.equals(MARK_AS_READ_TASK_KEY) || taskName.equals(REPLY_TASK_KEY)) {
                 sendToJS(extras);
             }
             return null;

@@ -33,10 +33,46 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
-        String from = message.getFrom(); // it is from ... (need help)
-        RemoteMessage.Notification remoteNotification = message.getNotification();
+        Log.v(LOG_TAG, "[onMessageReceived] start: " + message);
 
         final Bundle bundle = new Bundle();
+
+        for(Map.Entry<String, String> entry : message.getData().entrySet()) {
+            Log.v(LOG_TAG, "[PushData]: key " + entry.getKey() + " value: " + entry.getValue());
+            bundle.putString(entry.getKey(), entry.getValue());
+        }
+
+        if (bundle.containsKey("callStart") || bundle.containsKey("callEnd")) {
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(new Runnable() {
+                public void run() {
+                    // Construct and load our normal React JS code bundle
+                    // If it's constructed, send a notification
+
+                    ReactInstanceManager mReactInstanceManager = ((ReactApplication) getApplication()).getReactNativeHost().getReactInstanceManager();
+                    ReactContext context = mReactInstanceManager.getCurrentReactContext();
+
+                    if (context != null) {
+                        handleRemotePushNotification((ReactApplicationContext) context, bundle);
+                    } else {
+                        // Otherwise wait for construction, then send the notification
+                        mReactInstanceManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
+                            public void onReactContextInitialized(ReactContext context) {
+                                handleRemotePushNotification((ReactApplicationContext) context, bundle);
+                            }
+                        });
+                        if (!mReactInstanceManager.hasStartedCreatingInitialContext()) {
+                            // Construct it in the background
+                            mReactInstanceManager.createReactContextInBackground();
+                        }
+                    }
+                }
+            });
+            return;
+        }
+
+        String from = message.getFrom(); // it is from ... (need help)
+        RemoteMessage.Notification remoteNotification = message.getNotification();
         // Putting it from remoteNotification first so it can be overriden if message
         // data has it
         if (remoteNotification != null) {
@@ -45,9 +81,6 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             bundle.putString("message", remoteNotification.getBody());
         }
 
-        for(Map.Entry<String, String> entry : message.getData().entrySet()) {
-            bundle.putString(entry.getKey(), entry.getValue());
-        }
         JSONObject data = getPushData(bundle.getString("data"));
         // Copy `twi_body` to `message` to support Twilio
         if (bundle.containsKey("twi_body")) {
@@ -92,9 +125,11 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         handler.post(new Runnable() {
             public void run() {
                 // Construct and load our normal React JS code bundle
+                // If it's constructed, send a notification
+
                 ReactInstanceManager mReactInstanceManager = ((ReactApplication) getApplication()).getReactNativeHost().getReactInstanceManager();
                 ReactContext context = mReactInstanceManager.getCurrentReactContext();
-                // If it's constructed, send a notification
+
                 if (context != null) {
                     handleRemotePushNotification((ReactApplicationContext) context, bundle);
                 } else {
@@ -124,8 +159,10 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
 
     private void handleRemotePushNotification(ReactApplicationContext context, Bundle bundle) {
 
+        boolean isCallPush = bundle.containsKey("callStart") || bundle.containsKey("callEnd");
+
         // If notification ID is not provided by the user for push notification, generate one at random
-        if (bundle.getString("id") == null) {
+        if (bundle.getString("id") == null && !isCallPush) {
             Random randomNumberGenerator = new Random(System.currentTimeMillis());
             bundle.putString("id", String.valueOf(randomNumberGenerator.nextInt()));
         }
@@ -141,7 +178,13 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         // RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
         bundle.putBoolean("foreground", isForeground);
         bundle.putBoolean("userInteraction", false);
-        bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.NOTIFY_TASK_KEY);
+        if (!isCallPush) {
+            bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.NOTIFY_TASK_KEY);
+        } else if (bundle.containsKey("callStart")) {
+            bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.START_CALL_TASK_KEY);
+        } else if (bundle.containsKey("callEnd")) {
+            bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.END_CALL_TASK_KEY);
+        }
         // jsDelivery.notifyNotification(bundle);
 
         // If contentAvailable is set to true, then send out a remote fetch event
@@ -150,7 +193,9 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
 //        }
 
         System.out.println("handleRemotePushNotification bundle: " + bundle);
-        putPushMessageToRNSharedPreferences(context, bundle);
+        if (!isCallPush) {
+            putPushMessageToRNSharedPreferences(context, bundle);
+        }
 
         Application applicationContext = (Application) context.getApplicationContext();
 

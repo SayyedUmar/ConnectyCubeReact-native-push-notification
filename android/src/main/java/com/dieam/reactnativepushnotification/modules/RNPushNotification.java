@@ -176,24 +176,6 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
-    public void registerBackgroundTaskNotify(String taskName) {
-        System.out.println("[registerBackgroundTaskNotify][arguments] " + taskName);
-        JSPushNotificationTask.setNotifyTaskName(taskName);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTaskMarkAsRead(String taskName) {
-        System.out.println("[registerBackgroundTaskMarkAsRead][arguments] " + taskName);
-        JSPushNotificationTask.setMarkAsReadTaskName(taskName);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTasReply(String taskName) {
-        System.out.println("[registerBackgroundTasReply][arguments] " + taskName);
-        JSPushNotificationTask.setRelyTaskName(taskName);
-    }
-
-    @ReactMethod
     public void presentLocalNotification(ReadableMap details) {
         Bundle bundle = Arguments.toBundle(details);
         // If notification ID is not provided by the user, generate one at random

@@ -67,18 +67,6 @@ NotificationsComponent.prototype.createGroupNotification = function(details: Obj
 	RNPushNotification.createGroupNotification(details);
 };
 
-NotificationsComponent.prototype.registerBackgroundTaskNotify = function(taskName) {
-  RNPushNotification.registerBackgroundTaskNotify(taskName)
-}
-
-NotificationsComponent.prototype.registerBackgroundTaskMarkAsRead = function(taskName) {
-  RNPushNotification.registerBackgroundTaskMarkAsRead(taskName)
-}
-
-NotificationsComponent.prototype.registerBackgroundTasReply = function(taskName) {
-  RNPushNotification.registerBackgroundTasReply(taskName)
-}
-
 NotificationsComponent.prototype.scheduleLocalNotification = function(details: Object) {
 	RNPushNotification.scheduleLocalNotification(details);
 };

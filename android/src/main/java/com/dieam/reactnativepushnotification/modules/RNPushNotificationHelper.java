@@ -20,6 +20,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.os.Handler;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.RemoteInput;
@@ -54,6 +55,8 @@ public class RNPushNotificationHelper {
     private static final int ONE_MINUTE = 60 * 1000;
     private static final long ONE_HOUR = 60 * ONE_MINUTE;
     private static final long ONE_DAY = 24 * ONE_HOUR;
+
+    private int greedColor = Color.argb(255, 1, 117, 37);
 
     public RNPushNotificationHelper(Application context) {
         this.context = context;
@@ -153,6 +156,125 @@ public class RNPushNotificationHelper {
             getAlarmManager().set(AlarmManager.RTC_WAKEUP, fireDate, pendingIntent);
         }
     }
+
+    private void setTimeoutCancelNotification(final int notificationID, long delay) {
+        new Handler().postDelayed(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        clearNotification(notificationID);
+                    }
+                }
+        , delay);
+    }
+
+    public void sendToCallNotifications(Bundle bundle) {
+        System.out.println("[sendToCallNotifications][arguments]");
+        System.out.println(bundle);
+        Class intentClass = getMainActivityClass();
+        try {
+            if (intentClass == null) {
+                Log.e(LOG_TAG, "No activity class found for the notification");
+                return;
+            }
+
+            int notificationID = bundle.getInt("notificationID");
+            String title = bundle.getString("title");
+            String contentText = bundle.getString("message");
+            long autoCancelDelay = bundle.getLong("autoCancelAfter", 30000);
+
+            System.out.println("[sendToCallNotifications][id]: " + notificationID);
+
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                    .setContentTitle(title)
+                    .setContentText(contentText)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setOngoing(true)
+                    .setColor(greedColor)
+                    .setTimeoutAfter(autoCancelDelay) // api 26 >=
+                    .setAutoCancel(true);
+
+            Resources res = context.getResources();
+            String packageName = context.getPackageName();
+
+            if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
+                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                String soundName = bundle.getString("soundName");
+                if (soundName != null) {
+                    if (!"default".equalsIgnoreCase(soundName)) {
+
+                        // sound name can be full filename, or just the resource name.
+                        // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
+                        // The reason is to make the iOS and android javascript interfaces compatible
+
+                        int resId;
+                        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
+                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+                        } else {
+                            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
+                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+                        }
+
+                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
+                    }
+                }
+                notificationBuilder.setSound(soundUri);
+            }
+
+            String smallIcon = bundle.getString("smallIcon");
+            int smallIconResId = 0;
+
+            if (smallIcon != null) {
+                smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
+            } else {
+                smallIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (smallIconResId == 0) {
+                smallIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (smallIconResId == 0) {
+                    smallIconResId = android.R.drawable.ic_dialog_info;
+                }
+            }
+
+            notificationBuilder.setSmallIcon(smallIconResId);
+
+            notificationBuilder.setVibrate(new long[]{0, 1000, 2000, 1000});
+
+            bundle.putBoolean("userInteraction", true);
+            bundle.putBoolean("foreground", true);
+            bundle.putBoolean("foregroundCall", true);
+
+            Log.d("[NID]", "" + notificationID);
+            System.out.println("[IntentBundle]: " + bundle);
+
+            Intent intent = new Intent(context, intentClass);
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra(NOTIFICATION_BUNDLE, bundle);
+            int pandingIntentId = (notificationID + "" + System.currentTimeMillis()).hashCode();
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            notificationBuilder.setContentIntent(pendingIntent);
+
+
+            NotificationManager notificationManager = notificationManager();
+            checkOrCreateChannel(notificationManager);
+
+            Notification notification = notificationBuilder.build();
+
+            notification.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_INSISTENT | Notification.FLAG_AUTO_CANCEL;
+
+            notificationManager.notify(notificationID, notification);
+
+            setTimeoutCancelNotification(notificationID, autoCancelDelay);
+
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "failed to send push notification", e);
+        }
+    }
+
     public void sendToMessagingNotificatios(Bundle bundle) {
         System.out.println("[sendToMessagingNotificatios][arguments]");
         System.out.println(bundle);
@@ -198,8 +320,6 @@ public class RNPushNotificationHelper {
                 message_ids.add(messageBundle.getString("message_id"));
                 messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
-
-            int greedColor = Color.argb(255, 1, 117, 37);
 
             notificationBuilder
                     .setContentTitle(dialog)
@@ -1068,43 +1188,14 @@ public class RNPushNotificationHelper {
         if (manager == null)
             return;
 
-        Bundle bundle = new Bundle();
 
         int importance = NotificationManager.IMPORTANCE_HIGH;
-        final String importanceString = bundle.getString("importance");
-
-        if (importanceString != null) {
-            switch(importanceString.toLowerCase()) {
-                case "default":
-                    importance = NotificationManager.IMPORTANCE_DEFAULT;
-                    break;
-                case "max":
-                    importance = NotificationManager.IMPORTANCE_MAX;
-                    break;
-                case "high":
-                    importance = NotificationManager.IMPORTANCE_HIGH;
-                    break;
-                case "low":
-                    importance = NotificationManager.IMPORTANCE_LOW;
-                    break;
-                case "min":
-                    importance = NotificationManager.IMPORTANCE_MIN;
-                    break;
-                case "none":
-                    importance = NotificationManager.IMPORTANCE_NONE;
-                    break;
-                case "unspecified":
-                    importance = NotificationManager.IMPORTANCE_UNSPECIFIED;
-                    break;
-                default:
-                    importance = NotificationManager.IMPORTANCE_HIGH;
-            }
-        }
 
         NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, this.config.getChannelName(), importance);
         channel.setDescription(this.config.getChannelDescription());
         channel.enableLights(true);
         channel.enableVibration(true);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
         manager.createNotificationChannel(channel);
         channelCreated = true;

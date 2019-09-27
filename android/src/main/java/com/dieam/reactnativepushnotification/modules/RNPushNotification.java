@@ -74,7 +74,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
     public void onNewIntent(Intent intent) {
         Bundle bundle = this.getBundleFromIntent(intent);
-        if (bundle != null) {
+        if (bundle != null && !bundle.containsKey("foregroundCall")) {
             bundle.putBoolean("foreground", false);
             intent.putExtra("notification", bundle);
             mJsDelivery.notifyNotification(bundle);
@@ -146,6 +146,18 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     /** ConnectyCube Group Notifications **/
+
+    @ReactMethod
+    public void createCallNotification(ReadableMap details) {
+        Bundle bundle = Arguments.toBundle(details);
+        if (bundle.getString("id") == null) {
+            bundle.putInt("notificationID", bundle.getString("janusGroupId").hashCode());
+        } else {
+            bundle.putInt("notificationID", Integer.parseInt(bundle.getString("id")));
+            bundle.remove("id");
+        }
+        mRNPushNotificationHelper.sendToCallNotifications(bundle);
+    }
 
     @ReactMethod
     public void createMessageNotification(ReadableMap details) {

@@ -100,15 +100,15 @@ public class RNPushNotificationListenerServiceGcm extends GcmListenerService {
 
         Boolean isForeground = isApplicationInForeground();
 
-        RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
-        bundle.putBoolean("foreground", isForeground);
-        bundle.putBoolean("userInteraction", false);
-        jsDelivery.notifyNotification(bundle);
-
-        // If contentAvailable is set to true, then send out a remote fetch event
-        if (bundle.getString("contentAvailable", "false").equalsIgnoreCase("true")) {
-            jsDelivery.notifyRemoteFetch(bundle);
-        }
+//        RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
+//        bundle.putBoolean("foreground", isForeground);
+//        bundle.putBoolean("userInteraction", false);
+//        jsDelivery.notifyNotification(bundle);
+//
+//        // If contentAvailable is set to true, then send out a remote fetch event
+//        if (bundle.getString("contentAvailable", "false").equalsIgnoreCase("true")) {
+//            jsDelivery.notifyRemoteFetch(bundle);
+//        }
 
         Log.v(LOG_TAG, "sendNotification: " + bundle);
 

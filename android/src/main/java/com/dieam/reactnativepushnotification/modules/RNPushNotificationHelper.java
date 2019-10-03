@@ -19,6 +19,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.os.Handler;
 
@@ -157,12 +158,12 @@ public class RNPushNotificationHelper {
         }
     }
 
-    private void setTimeoutCancelNotification(final int notificationID, long delay) {
+    private void setTimeoutCancelNotification(final Context appContext, final Intent callHangUpTimeout, long delay) {
         new Handler().postDelayed(
                 new Runnable() {
                     @Override
                     public void run() {
-                        clearNotification(notificationID);
+                        appContext.startService(callHangUpTimeout);
                     }
                 }
         , delay);
@@ -192,7 +193,7 @@ public class RNPushNotificationHelper {
                     .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setOngoing(true)
                     .setColor(greedColor)
-                    .setTimeoutAfter(autoCancelDelay) // api 26 >=
+                    //.setTimeoutAfter(autoCancelDelay) // api 26 >=
                     .setAutoCancel(true);
 
             Resources res = context.getResources();
@@ -254,10 +255,52 @@ public class RNPushNotificationHelper {
             intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
             intent.putExtra(NOTIFICATION_BUNDLE, bundle);
             int pandingIntentId = (notificationID + "" + System.currentTimeMillis()).hashCode();
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-            notificationBuilder.setContentIntent(pendingIntent);
+            notificationBuilder.setContentIntent(contentPendingIntent);
 
+            Bundle actionsBundle = bundle.getBundle("actions");
+            Bundle actionBundle = new Bundle(bundle);
+
+            if (actionsBundle != null) {
+                // No icon for now. The icon value of 0 shows no icon.
+                int icon = 0;
+                for (String actionName : actionsBundle.keySet()) {
+                    String jsBgTaskName = actionsBundle.getString(actionName);
+
+                    if (TextUtils.isEmpty(jsBgTaskName)) {
+                        Intent answerIntent = new Intent(context, intentClass);
+                        answerIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        Bundle answerActionBundle = new Bundle(actionBundle);
+                        answerActionBundle.putBoolean("answer", true);
+                        answerIntent.putExtra(NOTIFICATION_BUNDLE, answerActionBundle);
+                        System.out.println("[Action Bundle] " + answerActionBundle);
+                        int answerPendingIntentId = (notificationID + "" + System.currentTimeMillis() + actionName.hashCode()).hashCode();
+                        PendingIntent answerPendingIntent = PendingIntent.getActivity(context, answerPendingIntentId, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                        notificationBuilder.addAction(icon, actionName, answerPendingIntent);
+                        continue;
+                    }
+
+                    Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                    actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    actionIntent.setAction(context.getPackageName() + "." + actionName);
+
+                    System.out.println("[Action Bundle] " + actionBundle);
+
+                    // Add "action" for later identifying which button gets pressed.
+                    actionBundle.putString("action", actionName);
+                    actionBundle.putBoolean("hangUp", true);
+                    actionBundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, jsBgTaskName);
+                    actionIntent.putExtras(actionBundle);
+                    int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
+                    PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT);
+
+                    setTimeoutCancelNotification(context, actionIntent, autoCancelDelay);
+
+                    notificationBuilder.addAction(icon, actionName, pendingActionIntent);
+                }
+            }
 
             NotificationManager notificationManager = notificationManager();
             checkOrCreateChannel(notificationManager);
@@ -267,8 +310,6 @@ public class RNPushNotificationHelper {
             notification.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_INSISTENT | Notification.FLAG_AUTO_CANCEL;
 
             notificationManager.notify(notificationID, notification);
-
-            setTimeoutCancelNotification(notificationID, autoCancelDelay);
 
         } catch (Exception e) {
             Log.e(LOG_TAG, "failed to send push notification", e);

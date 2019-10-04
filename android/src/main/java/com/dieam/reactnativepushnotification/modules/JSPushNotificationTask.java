@@ -5,6 +5,7 @@ import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 
 import androidx.core.app.RemoteInput;
@@ -17,6 +18,7 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.jstasks.HeadlessJsTaskConfig;
 
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -30,6 +32,25 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
     static final String MARK_AS_READ_TASK_KEY = "MARK_AS_READ_TASK_KEY";
     static final String REPLY_TASK_KEY = "REPLY_TASK_KEY";
     static final String REPLY_INPUT_KEY = "REPLY_INPUT_KEY";
+    public static Handler hangUpTimeoutHandler = new Handler();
+    static final HashMap<String, Runnable> janusGroupIdHangUpRunableMap = new HashMap<>();
+
+    static public void setHangUpRunable(String janusGroupId, Runnable hangUpTimeout, long delay) {
+        hangUpTimeoutHandler.postDelayed(hangUpTimeout, delay);
+        janusGroupIdHangUpRunableMap.put(janusGroupId, hangUpTimeout);
+    }
+
+    static public boolean removeHangUpRunable(String janusGroupId) {
+        if (hangUpTimeoutHandler != null) {
+            Runnable hangUp = janusGroupIdHangUpRunableMap.get(janusGroupId);
+            if (hangUp != null) {
+                hangUpTimeoutHandler.removeCallbacks(hangUp);
+                janusGroupIdHangUpRunableMap.remove(janusGroupId);
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
     protected @Nullable
@@ -50,8 +71,9 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
             Bundle remoteInputBundle = RemoteInput.getResultsFromIntent(intent);
             extras.putString("reply_message_text", remoteInputBundle.getString(REPLY_INPUT_KEY));
         } else if (taskName.equals(END_CALL_TASK_KEY)) {
-           RNPushNotificationHelper.cancelHangUpTimeout();
-           Log.d(TAG, "[resultCancelHangUpTimeout]");
+            String janusGroupIdKey = extras.getString("janusGroupId");
+            boolean result = removeHangUpRunable(janusGroupIdKey);
+           Log.d(TAG, "[resultCancelHangUpTimeout] " + result);
         }
         if (this.isApplicationInForeground()) {
             if (taskName.equals(MARK_AS_READ_TASK_KEY) || taskName.equals(REPLY_TASK_KEY)) {

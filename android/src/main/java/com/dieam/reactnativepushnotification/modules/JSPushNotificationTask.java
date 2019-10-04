@@ -22,21 +22,13 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 public class JSPushNotificationTask extends HeadlessJsTaskService {
-
     static final String TAG = "[JS_BH_TASK]";
-
     static final String BUNDLE_TASK_NAME_KEY = "BUNDLE_TASK_NAME_KEY";
-
     static final String START_CALL_TASK_KEY = "START_CALL_TASK_KEY";
-
     static final String END_CALL_TASK_KEY = "END_CALL_TASK_KEY";
-
     static final String NOTIFY_TASK_KEY = "NOTIFY_TASK_KEY";
-
     static final String MARK_AS_READ_TASK_KEY = "MARK_AS_READ_TASK_KEY";
-
     static final String REPLY_TASK_KEY = "REPLY_TASK_KEY";
-
     static final String REPLY_INPUT_KEY = "REPLY_INPUT_KEY";
 
     @Override
@@ -57,6 +49,9 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
         if (taskName.equals(REPLY_TASK_KEY)) {
             Bundle remoteInputBundle = RemoteInput.getResultsFromIntent(intent);
             extras.putString("reply_message_text", remoteInputBundle.getString(REPLY_INPUT_KEY));
+        } else if (taskName.equals(END_CALL_TASK_KEY)) {
+           RNPushNotificationHelper.cancelHangUpTimeout();
+           Log.d(TAG, "[resultCancelHangUpTimeout]");
         }
         if (this.isApplicationInForeground()) {
             if (taskName.equals(MARK_AS_READ_TASK_KEY) || taskName.equals(REPLY_TASK_KEY)) {

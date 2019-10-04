@@ -19,9 +19,9 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
-import android.os.Handler;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.RemoteInput;
@@ -47,15 +47,21 @@ public class RNPushNotificationHelper {
     public static final String NOTIFICATION_BUNDLE = "notification";
     public static final String DELETE_MESSAGE = "DELETE_MESSAGE";
     public static final String MESSAGING_STYLE_TEXT = "";
-
+    public static Handler hangUpTimeoutHandler;
+    public static Runnable hangUpTimeoutRunable;
+    private static final int ONE_MINUTE = 60 * 1000;
+    private static final long ONE_HOUR = 60 * ONE_MINUTE;
+    private static final long ONE_DAY = 24 * ONE_HOUR;
     private static final RNPushNotificationsMessages hashMapDialogsToMessages = new RNPushNotificationsMessages();
+
+    public static void cancelHangUpTimeout() {
+        if (hangUpTimeoutHandler == null && hangUpTimeoutRunable == null) return;
+        hangUpTimeoutHandler.removeCallbacks(hangUpTimeoutRunable);
+    }
 
     private Context context;
     private RNPushNotificationConfig config;
     private final SharedPreferences scheduledNotificationsPersistence;
-    private static final int ONE_MINUTE = 60 * 1000;
-    private static final long ONE_HOUR = 60 * ONE_MINUTE;
-    private static final long ONE_DAY = 24 * ONE_HOUR;
 
     private int greedColor = Color.argb(255, 1, 117, 37);
 
@@ -158,15 +164,19 @@ public class RNPushNotificationHelper {
         }
     }
 
-    private void setTimeoutCancelNotification(final Context appContext, final Intent callHangUpTimeout, long delay) {
-        new Handler().postDelayed(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        appContext.startService(callHangUpTimeout);
-                    }
-                }
-        , delay);
+    private void setTimeoutCancelNotification(final Context appContext, final Bundle callHangUpTimeoutIntentBundle, long delay) {
+        hangUpTimeoutRunable = new Runnable() {
+            @Override
+            public void run() {
+                Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                actionIntent.setAction(context.getPackageName() + "." + callHangUpTimeoutIntentBundle.getString("action"));
+                actionIntent.putExtras(callHangUpTimeoutIntentBundle);
+                appContext.startService(actionIntent);
+            }
+        };
+        hangUpTimeoutHandler = new Handler();
+        hangUpTimeoutHandler.postDelayed(hangUpTimeoutRunable, delay);
     }
 
     public void sendToCallNotifications(Bundle bundle) {
@@ -296,7 +306,7 @@ public class RNPushNotificationHelper {
                     PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT);
 
-                    setTimeoutCancelNotification(context, actionIntent, autoCancelDelay);
+                    setTimeoutCancelNotification(context, new Bundle(actionBundle), autoCancelDelay);
 
                     notificationBuilder.addAction(icon, actionName, pendingActionIntent);
                 }

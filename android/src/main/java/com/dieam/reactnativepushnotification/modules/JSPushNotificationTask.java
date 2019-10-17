@@ -3,9 +3,11 @@ package com.dieam.reactnativepushnotification.modules;
 
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.telecom.TelecomManager;
 import android.util.Log;
 
 import androidx.core.app.RemoteInput;
@@ -99,7 +101,9 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
                 if (processInfo.processName.equals(getApplication().getPackageName())) {
                     if (processInfo.importance == RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                         for (String d : processInfo.pkgList) {
-                            return true;
+                            TelecomManager telM = (TelecomManager) getApplicationContext().getSystemService(Context.TELECOM_SERVICE);
+                            boolean isInCall = telM.isInCall();
+                            return !isInCall;
                         }
                     }
                 }

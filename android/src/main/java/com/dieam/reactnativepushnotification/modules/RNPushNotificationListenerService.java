@@ -19,15 +19,12 @@ import com.facebook.react.bridge.ReactContext;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import in.sriraman.sharedpreferences.RNSharedPreferencesModule;
 
 import static com.dieam.reactnativepushnotification.modules.RNPushNotification.LOG_TAG;
 
@@ -197,7 +194,6 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
 //        }
 
         System.out.println("handleRemotePushNotification bundle: " + bundle);
-        putPushMessageToRNSharedPreferences(context, bundle);
 
         Application applicationContext = (Application) context.getApplicationContext();
 
@@ -227,35 +223,6 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         System.out.println("[parseSenderName] " + message);
 
         return messageMap;
-    }
-
-    private static void putPushMessageToRNSharedPreferences(ReactApplicationContext context, Bundle pushMessageBundle)
-    {
-        Log.v(LOG_TAG, "[putPushMessageToRNSharedPreferences]: " + pushMessageBundle);
-
-        RNSharedPreferencesModule sharedPreferences = new RNSharedPreferencesModule(context);
-
-        JSONObject jsonMessage = new JSONObject();
-        String message_id = null;
-
-        try {
-            message_id = pushMessageBundle.getString("message_id");
-
-            jsonMessage.put("message_id", message_id);
-            jsonMessage.put("dialog_id", pushMessageBundle.getString("dialog_id"));
-            jsonMessage.put("sender_id", pushMessageBundle.getString("user_id"));
-            jsonMessage.put("message", pushMessageBundle.getString("message"));
-            jsonMessage.put("date_sent", pushMessageBundle.getInt("date_sent"));
-            jsonMessage.put("sender", pushMessageBundle.getString("sender"));
-            jsonMessage.put("title", pushMessageBundle.getString("title"));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        if (message_id != null)
-        {
-            sharedPreferences.setItem(message_id, jsonMessage.toString());
-        }
     }
 
     private boolean isApplicationInForeground() {

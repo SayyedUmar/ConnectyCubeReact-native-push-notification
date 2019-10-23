@@ -19,6 +19,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -45,15 +46,17 @@ public class RNPushNotificationHelper {
     public static final String NOTIFICATION_BUNDLE = "notification";
     public static final String DELETE_MESSAGE = "DELETE_MESSAGE";
     public static final String MESSAGING_STYLE_TEXT = "";
-
+    private static final int ONE_MINUTE = 60 * 1000;
+    private static final long ONE_HOUR = 60 * ONE_MINUTE;
+    private static final long ONE_DAY = 24 * ONE_HOUR;
     private static final RNPushNotificationsMessages hashMapDialogsToMessages = new RNPushNotificationsMessages();
+
 
     private Context context;
     private RNPushNotificationConfig config;
     private final SharedPreferences scheduledNotificationsPersistence;
-    private static final int ONE_MINUTE = 60 * 1000;
-    private static final long ONE_HOUR = 60 * ONE_MINUTE;
-    private static final long ONE_DAY = 24 * ONE_HOUR;
+
+    private int greedColor = Color.argb(255, 1, 117, 37);
 
     public RNPushNotificationHelper(Application context) {
         this.context = context;
@@ -153,6 +156,169 @@ public class RNPushNotificationHelper {
             getAlarmManager().set(AlarmManager.RTC_WAKEUP, fireDate, pendingIntent);
         }
     }
+
+    private void setTimeoutCancelNotification(final Context appContext, final Bundle callHangUpTimeoutIntentBundle, long delay) {
+        Runnable hangUpTimeoutRunable = new Runnable() {
+            @Override
+            public void run() {
+                Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                actionIntent.setAction(context.getPackageName() + "." + callHangUpTimeoutIntentBundle.getString("action"));
+                actionIntent.putExtras(callHangUpTimeoutIntentBundle);
+                appContext.startService(actionIntent);
+            }
+        };
+        String janusGroupIdKey = callHangUpTimeoutIntentBundle.getString("janusGroupId");
+        JSPushNotificationTask.setHangUpRunable(janusGroupIdKey, hangUpTimeoutRunable, delay);
+    }
+
+    public void sendToCallNotifications(Bundle bundle) {
+        System.out.println("[sendToCallNotifications][arguments]");
+        System.out.println(bundle);
+        Class intentClass = getMainActivityClass();
+        try {
+            if (intentClass == null) {
+                Log.e(LOG_TAG, "No activity class found for the notification");
+                return;
+            }
+
+            int notificationID = bundle.getInt("notificationID");
+            String title = bundle.getString("title");
+            String contentText = bundle.getString("message");
+            long autoCancelDelay = bundle.getLong("autoCancelAfter", 30000);
+
+            System.out.println("[sendToCallNotifications][id]: " + notificationID);
+
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                    .setContentTitle(title)
+                    .setContentText(contentText)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setOngoing(true)
+                    .setColor(greedColor)
+                    //.setTimeoutAfter(autoCancelDelay) // api 26 >=
+                    .setAutoCancel(true);
+
+            Resources res = context.getResources();
+            String packageName = context.getPackageName();
+
+            if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
+                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                String soundName = bundle.getString("soundName");
+                if (soundName != null) {
+                    if (!"default".equalsIgnoreCase(soundName)) {
+
+                        // sound name can be full filename, or just the resource name.
+                        // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
+                        // The reason is to make the iOS and android javascript interfaces compatible
+
+                        int resId;
+                        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
+                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+                        } else {
+                            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
+                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+                        }
+
+                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
+                    }
+                }
+                notificationBuilder.setSound(soundUri);
+            }
+
+            String smallIcon = bundle.getString("smallIcon");
+            int smallIconResId = 0;
+
+            if (smallIcon != null) {
+                smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
+            } else {
+                smallIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (smallIconResId == 0) {
+                smallIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (smallIconResId == 0) {
+                    smallIconResId = android.R.drawable.ic_dialog_info;
+                }
+            }
+
+            notificationBuilder.setSmallIcon(smallIconResId);
+
+            notificationBuilder.setVibrate(new long[]{0, 1000, 2000, 1000});
+
+            bundle.putBoolean("userInteraction", true);
+            bundle.putBoolean("foreground", true);
+            bundle.putBoolean("foregroundCall", true);
+
+            Log.d("[NID]", "" + notificationID);
+            System.out.println("[IntentBundle]: " + bundle);
+
+            Intent intent = new Intent(context, intentClass);
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra(NOTIFICATION_BUNDLE, bundle);
+            int pandingIntentId = (notificationID + "" + System.currentTimeMillis()).hashCode();
+            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            notificationBuilder.setContentIntent(contentPendingIntent);
+
+            Bundle actionsBundle = bundle.getBundle("actions");
+            Bundle actionBundle = new Bundle(bundle);
+
+            if (actionsBundle != null) {
+                // No icon for now. The icon value of 0 shows no icon.
+                int icon = 0;
+                for (String actionName : actionsBundle.keySet()) {
+                    String jsBgTaskName = actionsBundle.getString(actionName);
+
+                    if (TextUtils.isEmpty(jsBgTaskName)) {
+                        Intent answerIntent = new Intent(context, intentClass);
+                        answerIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        Bundle answerActionBundle = new Bundle(actionBundle);
+                        answerActionBundle.putBoolean("answer", true);
+                        answerIntent.putExtra(NOTIFICATION_BUNDLE, answerActionBundle);
+                        System.out.println("[Action Bundle] " + answerActionBundle);
+                        int answerPendingIntentId = (notificationID + "" + System.currentTimeMillis() + actionName.hashCode()).hashCode();
+                        PendingIntent answerPendingIntent = PendingIntent.getActivity(context, answerPendingIntentId, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                        notificationBuilder.addAction(icon, actionName, answerPendingIntent);
+                        continue;
+                    }
+
+                    Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                    actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    actionIntent.setAction(context.getPackageName() + "." + actionName);
+
+                    System.out.println("[Action Bundle] " + actionBundle);
+
+                    // Add "action" for later identifying which button gets pressed.
+                    actionBundle.putString("action", actionName);
+                    actionBundle.putBoolean("hangUp", true);
+                    actionBundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, jsBgTaskName);
+                    actionIntent.putExtras(actionBundle);
+                    int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
+                    PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT);
+
+                    setTimeoutCancelNotification(context, new Bundle(actionBundle), autoCancelDelay);
+
+                    notificationBuilder.addAction(icon, actionName, pendingActionIntent);
+                }
+            }
+
+            NotificationManager notificationManager = notificationManager();
+            checkOrCreateChannel(notificationManager);
+
+            Notification notification = notificationBuilder.build();
+
+            notification.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_INSISTENT | Notification.FLAG_AUTO_CANCEL;
+
+            notificationManager.notify(notificationID, notification);
+
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "failed to send push notification", e);
+        }
+    }
+
     public void sendToMessagingNotificatios(Bundle bundle) {
         System.out.println("[sendToMessagingNotificatios][arguments]");
         System.out.println(bundle);
@@ -198,8 +364,6 @@ public class RNPushNotificationHelper {
                 message_ids.add(messageBundle.getString("message_id"));
                 messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
-
-            int greedColor = Color.argb(255, 1, 117, 37);
 
             notificationBuilder
                     .setContentTitle(dialog)
@@ -1068,43 +1232,14 @@ public class RNPushNotificationHelper {
         if (manager == null)
             return;
 
-        Bundle bundle = new Bundle();
 
         int importance = NotificationManager.IMPORTANCE_HIGH;
-        final String importanceString = bundle.getString("importance");
-
-        if (importanceString != null) {
-            switch(importanceString.toLowerCase()) {
-                case "default":
-                    importance = NotificationManager.IMPORTANCE_DEFAULT;
-                    break;
-                case "max":
-                    importance = NotificationManager.IMPORTANCE_MAX;
-                    break;
-                case "high":
-                    importance = NotificationManager.IMPORTANCE_HIGH;
-                    break;
-                case "low":
-                    importance = NotificationManager.IMPORTANCE_LOW;
-                    break;
-                case "min":
-                    importance = NotificationManager.IMPORTANCE_MIN;
-                    break;
-                case "none":
-                    importance = NotificationManager.IMPORTANCE_NONE;
-                    break;
-                case "unspecified":
-                    importance = NotificationManager.IMPORTANCE_UNSPECIFIED;
-                    break;
-                default:
-                    importance = NotificationManager.IMPORTANCE_HIGH;
-            }
-        }
 
         NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, this.config.getChannelName(), importance);
         channel.setDescription(this.config.getChannelDescription());
         channel.enableLights(true);
         channel.enableVibration(true);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
         manager.createNotificationChannel(channel);
         channelCreated = true;

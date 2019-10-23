@@ -74,7 +74,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
     public void onNewIntent(Intent intent) {
         Bundle bundle = this.getBundleFromIntent(intent);
-        if (bundle != null) {
+        if (bundle != null && !bundle.containsKey("foregroundCall")) {
             bundle.putBoolean("foreground", false);
             intent.putExtra("notification", bundle);
             mJsDelivery.notifyNotification(bundle);
@@ -148,6 +148,18 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     /** ConnectyCube Group Notifications **/
 
     @ReactMethod
+    public void createCallNotification(ReadableMap details) {
+        Bundle bundle = Arguments.toBundle(details);
+        if (bundle.getString("id") == null) {
+            bundle.putInt("notificationID", bundle.getString("janusGroupId").hashCode());
+        } else {
+            bundle.putInt("notificationID", Integer.parseInt(bundle.getString("id")));
+            bundle.remove("id");
+        }
+        mRNPushNotificationHelper.sendToCallNotifications(bundle);
+    }
+
+    @ReactMethod
     public void createMessageNotification(ReadableMap details) {
         Bundle bundle = Arguments.toBundle(details);
         // If notification ID is not provided by the user, generate one at random
@@ -173,24 +185,6 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
       System.out.println("[createGroupNotification][arguments]");
       System.out.println(bundle);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTaskNotify(String taskName) {
-        System.out.println("[registerBackgroundTaskNotify][arguments] " + taskName);
-        JSPushNotificationTask.setNotifyTaskName(taskName);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTaskMarkAsRead(String taskName) {
-        System.out.println("[registerBackgroundTaskMarkAsRead][arguments] " + taskName);
-        JSPushNotificationTask.setMarkAsReadTaskName(taskName);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTasReply(String taskName) {
-        System.out.println("[registerBackgroundTasReply][arguments] " + taskName);
-        JSPushNotificationTask.setRelyTaskName(taskName);
     }
 
     @ReactMethod

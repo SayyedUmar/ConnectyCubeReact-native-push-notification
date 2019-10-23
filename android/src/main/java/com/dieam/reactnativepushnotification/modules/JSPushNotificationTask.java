@@ -3,8 +3,11 @@ package com.dieam.reactnativepushnotification.modules;
 
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.telecom.TelecomManager;
 import android.util.Log;
 
 import androidx.core.app.RemoteInput;
@@ -23,41 +26,32 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 public class JSPushNotificationTask extends HeadlessJsTaskService {
-
     static final String TAG = "[JS_BH_TASK]";
-
     static final String BUNDLE_TASK_NAME_KEY = "BUNDLE_TASK_NAME_KEY";
-
+    static final String START_CALL_TASK_KEY = "START_CALL_TASK_KEY";
+    static final String END_CALL_TASK_KEY = "END_CALL_TASK_KEY";
     static final String NOTIFY_TASK_KEY = "NOTIFY_TASK_KEY";
-
     static final String MARK_AS_READ_TASK_KEY = "MARK_AS_READ_TASK_KEY";
-
     static final String REPLY_TASK_KEY = "REPLY_TASK_KEY";
-
     static final String REPLY_INPUT_KEY = "REPLY_INPUT_KEY";
+    public static Handler hangUpTimeoutHandler = new Handler();
+    static final HashMap<String, Runnable> janusGroupIdHangUpRunableMap = new HashMap<>();
 
-    static HashMap<String, String> taskNames = new HashMap<>();
-
-    static void setNotifyTaskName(String taskName) {
-        taskNames.put(NOTIFY_TASK_KEY, taskName);
+    static public void setHangUpRunable(String janusGroupId, Runnable hangUpTimeout, long delay) {
+        hangUpTimeoutHandler.postDelayed(hangUpTimeout, delay);
+        janusGroupIdHangUpRunableMap.put(janusGroupId, hangUpTimeout);
     }
 
-    static void setMarkAsReadTaskName(String taskName) {
-        taskNames.put(MARK_AS_READ_TASK_KEY, taskName);
-    }
-
-    static void setRelyTaskName(String taskName) {
-        taskNames.put(REPLY_TASK_KEY, taskName);
-    }
-
-    public String getTaskName(Bundle extras) {
-        String taskName = extras.getString(BUNDLE_TASK_NAME_KEY);
-        boolean isExists = taskName != null && taskNames.containsKey(taskName);
-        if (isExists) {
-            extras.remove(BUNDLE_TASK_NAME_KEY);
-            return taskNames.get(taskName);
+    static public boolean removeHangUpRunable(String janusGroupId) {
+        if (hangUpTimeoutHandler != null) {
+            Runnable hangUp = janusGroupIdHangUpRunableMap.get(janusGroupId);
+            if (hangUp != null) {
+                hangUpTimeoutHandler.removeCallbacks(hangUp);
+                janusGroupIdHangUpRunableMap.remove(janusGroupId);
+                return true;
+            }
         }
-        return null;
+        return false;
     }
 
     @Override
@@ -72,15 +66,19 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
         }
 
         if (extras == null) return null;
-        String taskName = getTaskName(extras);
+        String taskName = extras.getString(BUNDLE_TASK_NAME_KEY);
         Log.d(TAG, "taskName: " + taskName);
         if (taskName == null) return null;
-        if (taskName.equals(taskNames.get(REPLY_TASK_KEY))) {
+        if (taskName.equals(REPLY_TASK_KEY)) {
             Bundle remoteInputBundle = RemoteInput.getResultsFromIntent(intent);
             extras.putString("reply_message_text", remoteInputBundle.getString(REPLY_INPUT_KEY));
+        } else if (taskName.equals(END_CALL_TASK_KEY)) {
+            String janusGroupIdKey = extras.getString("janusGroupId");
+            boolean result = removeHangUpRunable(janusGroupIdKey);
+           Log.d(TAG, "[resultCancelHangUpTimeout] " + result);
         }
         if (this.isApplicationInForeground()) {
-            if (taskName.equals(taskNames.get(MARK_AS_READ_TASK_KEY)) || taskName.equals(taskNames.get(REPLY_TASK_KEY))) {
+            if (taskName.equals(MARK_AS_READ_TASK_KEY) || taskName.equals(REPLY_TASK_KEY)) {
                 sendToJS(extras);
             }
             return null;
@@ -103,7 +101,9 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
                 if (processInfo.processName.equals(getApplication().getPackageName())) {
                     if (processInfo.importance == RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                         for (String d : processInfo.pkgList) {
-                            return true;
+                            TelecomManager telM = (TelecomManager) getApplicationContext().getSystemService(Context.TELECOM_SERVICE);
+                            boolean isInCall = telM.isInCall();
+                            return !isInCall;
                         }
                     }
                 }

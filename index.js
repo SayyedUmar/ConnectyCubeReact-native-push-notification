@@ -29,9 +29,11 @@ var Notifications = {
   },
 
   JS_BACKGROUND_TASKS_KEYS: {
-    NOTIFY: 'NOTIFY_TAKS_NAME',
-    MARK_AS_READ: 'MARK_AS_READ_TASK_KEY',
-    REPLY: 'REPLY_TASK_KEY'
+    START_CALL_TASK_KEY: 'START_CALL_TASK_KEY',
+    END_CALL_TASK_KEY: 'END_CALL_TASK_KEY',
+    NOTIFY_TASK_KEY: 'NOTIFY_TASK_KEY',
+    MARK_AS_READ_TASK_KEY: 'MARK_AS_READ_TASK_KEY',
+    REPLY_TASK_KEY: 'REPLY_TASK_KEY'
   }
 };
 
@@ -156,6 +158,12 @@ Notifications.localNotification = function(details: Object) {
 
 /* ConnectyCube Group notifications */
 
+Notifications.createCallNotification = function(details: Object) {
+  if (Platform.OS === 'android') {
+		this.handler.createCallNotification(details)
+	}
+}
+
 Notifications.createMessageNotification = function(details: Object) {
 	if (Platform.OS === 'android') {
 		this.handler.createMessageNotification(details)
@@ -177,13 +185,6 @@ Notifications.registerBackgroundTask = function(taskName, taskFunction) {
   if (Platform.OS == 'android') {
     console.log('[Notifications][registerBackgroundTask]', taskName, taskFunction)
     AppRegistry.registerHeadlessTask(taskName, taskFunction)
-    if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.NOTIFY) {
-      this.handler.registerBackgroundTaskNotify(taskName)
-    } else if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.MARK_AS_READ) {
-      this.handler.registerBackgroundTaskMarkAsRead(taskName)
-    } else if (taskName === Notifications.JS_BACKGROUND_TASKS_KEYS.REPLY) {
-      this.handler.registerBackgroundTasReply(taskName)
-    }
   }
 }
 

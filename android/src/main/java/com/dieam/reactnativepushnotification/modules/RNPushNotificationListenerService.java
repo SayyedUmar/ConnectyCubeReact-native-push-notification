@@ -233,9 +233,10 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
                 if (processInfo.processName.equals(getApplication().getPackageName())) {
                     if (processInfo.importance == RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                         for (String d : processInfo.pkgList) {
-                            TelecomManager telM = (TelecomManager) getApplicationContext().getSystemService(Context.TELECOM_SERVICE);
-                            boolean isInCall = telM.isInCall();
-                            return !isInCall;
+                            //TelecomManager telM = (TelecomManager) getApplicationContext().getSystemService(Context.TELECOM_SERVICE);
+                            //boolean isInCall = telM.isInCall();
+                            //return !isInCall;
+                            return true;
                         }
                     }
                 }

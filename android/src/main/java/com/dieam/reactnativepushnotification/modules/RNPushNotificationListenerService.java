@@ -3,12 +3,10 @@ package com.dieam.reactnativepushnotification.modules;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.Application;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.telecom.TelecomManager;
 import android.util.Log;
 
 import com.dieam.reactnativepushnotification.helpers.ApplicationBadgeHelper;
@@ -109,6 +107,9 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         }
 
         HashMap<String, String> messageMap = parseSenderName(bundle.getString("message"));
+        if (messageMap == null) {
+            return;
+        }
         bundle.putString("title", messageMap.get("sender_name"));
         bundle.putString("sender", messageMap.get("sender_name"));
         bundle.putString("message", messageMap.get("message"));
@@ -211,6 +212,9 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
     private HashMap<String, String> parseSenderName(String message)
     {
         int indexOfSep = message.indexOf(":");
+        
+        if (indexOfSep == -1) { return null; }
+        
         HashMap<String, String> messageMap = new HashMap<String, String>();
 
         String senderName = message.substring(0, indexOfSep);

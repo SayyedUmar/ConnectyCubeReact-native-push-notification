@@ -39,7 +39,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             bundle.putString(entry.getKey(), entry.getValue());
         }
 
-        if (bundle.containsKey("callStart") || bundle.containsKey("callEnd")) {
+        if (bundle.containsKey("callStart") || bundle.containsKey("callEnd") || bundle.containsKey("story_id")) {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(new Runnable() {
                 public void run() {
@@ -181,12 +181,14 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.END_CALL_TASK_KEY);
         }
 
-        if(isForeground &&  bundle.containsKey("callEnd"))
+        if(isForeground &&  (bundle.containsKey("callEnd") || bundle.containsKey("story_id")))
         {
             RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
             jsDelivery.notifyNotification(bundle);
             return;
         }
+        
+        if (bundle.containsKey("story_id")) { return; }
 
 
         // If contentAvailable is set to true, then send out a remote fetch event

@@ -3,11 +3,9 @@ package com.dieam.reactnativepushnotification.modules;
 
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.telecom.TelecomManager;
 import android.util.Log;
 
 import androidx.core.app.RemoteInput;
@@ -77,13 +75,14 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
             boolean result = removeHangUpRunable(janusGroupIdKey);
            Log.d(TAG, "[resultCancelHangUpTimeout] " + result);
         }
-        if (this.isApplicationInForeground()) {
+        boolean isCallPush = taskName.equals(START_CALL_TASK_KEY) || taskName.equals(END_CALL_TASK_KEY);
+        if (this.isApplicationInForeground() && !isCallPush) {
             if (taskName.equals(MARK_AS_READ_TASK_KEY) || taskName.equals(REPLY_TASK_KEY)) {
                 sendToJS(extras);
             }
             return null;
         }
-        return new HeadlessJsTaskConfig(taskName, Arguments.fromBundle(extras));
+        return new HeadlessJsTaskConfig(taskName, Arguments.fromBundle(extras), 0, isCallPush);
     }
 
     public void sendToJS(Bundle bundle) {

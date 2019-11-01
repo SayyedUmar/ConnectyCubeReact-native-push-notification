@@ -181,7 +181,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             bundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.END_CALL_TASK_KEY);
         }
 
-        if(isForeground &&  (bundle.containsKey("callEnd") || bundle.containsKey("story_id")))
+        if(isForeground && bundle.containsKey("story_id"))
         {
             RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
             jsDelivery.notifyNotification(bundle);

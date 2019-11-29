@@ -56,14 +56,18 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
     protected @Nullable
     HeadlessJsTaskConfig getTaskConfig(Intent intent) {
         Bundle extras = intent.getExtras();
+        
+        if (extras == null) return null;
 
         for (String key : extras.keySet()) {
             Object value = extras.get(key);
+            if (value == null) {
+                continue;
+            }
             Log.d("[getTaskConfig]", "[bundleItem]:" + String.format("%s %s (%s)", key,
                     value.toString(), value.getClass().getName()));
         }
 
-        if (extras == null) return null;
         String taskName = extras.getString(BUNDLE_TASK_NAME_KEY);
         Log.d(TAG, "taskName: " + taskName);
         if (taskName == null) return null;

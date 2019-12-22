@@ -224,7 +224,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         senderName = senderName + ":";
 
         messageMap.put("sender_name", senderName);
-        messageMap.put("message", message.substring(indexOfSep + 1));
+        messageMap.put("message", message.substring(indexOfSep + 2));
 
         System.out.println("[parseSenderName] " + message);
 

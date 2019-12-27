@@ -164,7 +164,11 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
         Bundle bundle = Arguments.toBundle(details);
         // If notification ID is not provided by the user, generate one at random
         if (bundle.getString("id") == null) {
-            bundle.putInt("notificationID", bundle.getString("dialog_id").hashCode());
+            String dialog_id = bundle.getString("dialog_id");
+            if (dialog_id == null) {
+              return;
+            }
+            bundle.putInt("notificationID", dialog_id.hashCode());
         } else {
             bundle.putInt("notificationID", Integer.parseInt(bundle.getString("id")));
             bundle.remove("id");

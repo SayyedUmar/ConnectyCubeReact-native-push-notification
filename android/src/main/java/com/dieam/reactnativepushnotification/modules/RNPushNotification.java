@@ -35,13 +35,14 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     private RNPushNotificationHelper mRNPushNotificationHelper;
     private final Random mRandomNumberGenerator = new Random(System.currentTimeMillis());
     private RNPushNotificationJsDelivery mJsDelivery;
+    private Application applicationContext;
 
     public RNPushNotification(ReactApplicationContext reactContext) {
         super(reactContext);
 
         reactContext.addActivityEventListener(this);
 
-        Application applicationContext = (Application) reactContext.getApplicationContext();
+        applicationContext = (Application) reactContext.getApplicationContext();
 
         // The @ReactNative methods use this
         mRNPushNotificationHelper = new RNPushNotificationHelper(applicationContext);
@@ -295,4 +296,35 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     public void registerNotificationActions(ReadableArray actions) {
         registerNotificationsReceiveNotificationActions(actions);
     }
+
+    @ReactMethod
+    public void backToForeground() {
+        String packageName = applicationContext.getApplicationContext().getPackageName();
+        Intent focusIntent = applicationContext.getPackageManager().getLaunchIntentForPackage(packageName).cloneFilter();
+        focusIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        Activity activity = getCurrentActivity();
+        activity.startActivity(focusIntent);
+    }
+
+    @ReactMethod
+    public void launchApp(ReadableMap notificationData) {
+        Intent launchIntent = new Intent(applicationContext, getMainActivityClass(applicationContext));
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Bundle launchIntentDateBundle = Arguments.toBundle(notificationData);
+        launchIntent.putExtra("notification", launchIntentDateBundle);
+        applicationContext.startActivity(launchIntent);
+    }
+
+    public Class getMainActivityClass(Context context) {
+        String packageName = context.getPackageName();
+        Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+        String className = launchIntent.getComponent().getClassName();
+        try {
+            return Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 }

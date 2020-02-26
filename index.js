@@ -362,7 +362,7 @@ Notifications.launchApp = function(launchApp) {
 	return this.callNative('launchApp', arguments);
 }
 
-Notifications.backToForeground = function(launchApp) {
+Notifications.backToForeground = function() {
 	return this.callNative('backToForeground', arguments);
 }
 

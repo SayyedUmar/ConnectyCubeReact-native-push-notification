@@ -138,6 +138,14 @@ NotificationsComponent.prototype.clearAllNotifications = function() {
 	RNPushNotification.clearAllNotifications()
 }
 
+NotificationsComponent.prototype.launchApp = function(launchOptions) {
+	return RNPushNotification.launchApp(launchOptions);
+}
+
+NotificationsComponent.prototype.backToForeground = function() {
+	return RNPushNotification.backToForeground();
+}
+
 module.exports = {
 	state: false,
 	component: new NotificationsComponent()

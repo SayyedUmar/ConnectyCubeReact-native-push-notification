@@ -151,12 +151,6 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     @ReactMethod
     public void createCallNotification(ReadableMap details) {
         Bundle bundle = Arguments.toBundle(details);
-        if (bundle.getString("id") == null) {
-            bundle.putInt("notificationID", bundle.getString("janusGroupId").hashCode());
-        } else {
-            bundle.putInt("notificationID", Integer.parseInt(bundle.getString("id")));
-            bundle.remove("id");
-        }
         mRNPushNotificationHelper.sendToCallNotifications(bundle);
     }
 

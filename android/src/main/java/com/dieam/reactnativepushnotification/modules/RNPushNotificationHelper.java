@@ -183,11 +183,8 @@ public class RNPushNotificationHelper {
                 return;
             }
 
-            int notificationID = bundle.getInt("notificationID");
             String title = bundle.getString("title");
 //            String contentText = bundle.getString("message", "");
-
-            System.out.println("[sendToCallNotifications][id]: " + notificationID);
 
             NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_CALL_ID)
                     .setContentTitle(title)
@@ -223,13 +220,12 @@ public class RNPushNotificationHelper {
             bundle.putBoolean("foreground", true);
             bundle.putBoolean("foregroundCall", true);
 
-            Log.d("[NID]", "" + notificationID);
             System.out.println("[IntentBundle]: " + bundle);
 
             Intent intent = new Intent(context, intentClass);
             intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
             intent.putExtra(NOTIFICATION_BUNDLE, bundle);
-            int pandingIntentId = (notificationID + "" + System.currentTimeMillis()).hashCode();
+            int pandingIntentId = ("" + System.currentTimeMillis()).hashCode();
             PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
             notificationBuilder.setContentIntent(contentPendingIntent);
@@ -246,7 +242,6 @@ public class RNPushNotificationHelper {
             Intent startCallServiceIntent = new Intent(context, CallsService.class);
             Bundle startServiceBundle = new Bundle();
             startServiceBundle.putParcelable("notification", notification);
-            startServiceBundle.putInt("notificationID", notificationID);
             startCallServiceIntent.putExtras(startServiceBundle);
             context.startService(startCallServiceIntent);
 

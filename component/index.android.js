@@ -146,6 +146,10 @@ NotificationsComponent.prototype.backToForeground = function() {
 	return RNPushNotification.backToForeground();
 }
 
+NotificationsComponent.prototype.cancelCallNotification = function() {
+	return RNPushNotification.cancelCallNotification();
+}
+
 module.exports = {
 	state: false,
 	component: new NotificationsComponent()

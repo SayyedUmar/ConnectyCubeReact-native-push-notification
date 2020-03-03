@@ -293,6 +293,13 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
+    public void cancelCallNotification() {
+        Intent stopCallService = new Intent(applicationContext, CallsService.class);
+        applicationContext.stopService(stopCallService);
+        mRNPushNotificationHelper.clearNotification(CallsService.CALL_NOTIFICATION_ID);
+    }
+
+    @ReactMethod
     public void registerNotificationActions(ReadableArray actions) {
         registerNotificationsReceiveNotificationActions(actions);
     }

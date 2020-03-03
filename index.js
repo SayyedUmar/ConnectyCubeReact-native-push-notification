@@ -34,7 +34,7 @@ var Notifications = {
     NOTIFY_TASK_KEY: 'NOTIFY_TASK_KEY',
     MARK_AS_READ_TASK_KEY: 'MARK_AS_READ_TASK_KEY',
     REPLY_TASK_KEY: 'REPLY_TASK_KEY'
-  }
+	}
 };
 
 Notifications.callNative = function(name: String, params: Array) {
@@ -376,6 +376,14 @@ Notifications.checkPermissions = function() {
 
 Notifications.registerNotificationActions = function() {
 	return this.callNative('registerNotificationActions', arguments)
+}
+
+Notifications.cancelCallNotification = function() {
+	// Only available for Android
+	if (Platform.OS === 'android') {
+		return this.callNative('cancelCallNotification', arguments)
+	}
+	return Promise.resolve();
 }
 
 Notifications.clearAllNotifications = function() {

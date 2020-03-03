@@ -8,6 +8,9 @@ import android.os.IBinder;
 import androidx.annotation.Nullable;
 
 public class CallsService extends Service {
+
+    public static final int CALL_NOTIFICATION_ID = 6666645;
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -17,8 +20,7 @@ public class CallsService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Notification notification = intent.getParcelableExtra("notification");
-        int notificationID = intent.getIntExtra("notificationID", 0);
-        startForeground(notificationID, notification);
+        startForeground(CALL_NOTIFICATION_ID, notification);
         return super.onStartCommand(intent, flags, startId);
     }
 }

@@ -190,7 +190,7 @@ public class RNPushNotificationHelper {
                     .setContentTitle(title)
 //                    .setContentText(contentText)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setOngoing(true)
                     .setColor(greedColor);
 
@@ -203,7 +203,7 @@ public class RNPushNotificationHelper {
             if (smallIcon != null) {
                 smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
             } else {
-                smallIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+                smallIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
             }
 
             if (smallIconResId == 0) {
@@ -235,7 +235,7 @@ public class RNPushNotificationHelper {
 
             Notification notification = notificationBuilder.build();
 
-            notification.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_INSISTENT | Notification.FLAG_FOREGROUND_SERVICE;
+            notification.flags = notification.flags | Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE;
 
 //            notificationManager.notify(notificationID, notification);
 
@@ -1165,13 +1165,15 @@ public class RNPushNotificationHelper {
             return;
 
 
-        int importance = isCallChannel ? NotificationManager.IMPORTANCE_NONE : NotificationManager.IMPORTANCE_HIGH;
+        int importance = isCallChannel ? NotificationManager.IMPORTANCE_DEFAULT : NotificationManager.IMPORTANCE_HIGH;
 
         NotificationChannel channel = new NotificationChannel(isCallChannel ? NOTIFICATION_CHANNEL_CALL_ID : NOTIFICATION_CHANNEL_ID, this.config.getChannelName(), importance);
         channel.setDescription(this.config.getChannelDescription());
         if (!isCallChannel) {
             channel.enableLights(true);
             channel.enableVibration(true);
+        } else {
+            channel.setSound(null, null);
         }
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 

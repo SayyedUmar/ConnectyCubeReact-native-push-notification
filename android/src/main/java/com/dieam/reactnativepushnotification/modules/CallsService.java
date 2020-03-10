@@ -23,4 +23,14 @@ public class CallsService extends Service {
         startForeground(CALL_NOTIFICATION_ID, notification);
         return super.onStartCommand(intent, flags, startId);
     }
+
+    @Override
+    public boolean stopService(Intent name) {
+        return super.stopService(name);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+    }
 }

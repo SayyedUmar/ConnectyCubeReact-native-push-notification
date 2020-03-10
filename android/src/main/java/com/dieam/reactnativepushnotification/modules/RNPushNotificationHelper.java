@@ -19,7 +19,6 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -32,6 +31,7 @@ import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 import static com.dieam.reactnativepushnotification.modules.RNPushNotification.LOG_TAG;
 import static com.dieam.reactnativepushnotification.modules.RNPushNotificationAttributes.fromJson;
@@ -57,7 +57,7 @@ public class RNPushNotificationHelper {
     private RNPushNotificationConfig config;
     private final SharedPreferences scheduledNotificationsPersistence;
 
-    private int greedColor = Color.argb(255, 1, 117, 37);
+    private int blueColor = Color.argb(255, 67, 163, 204);
 
     public RNPushNotificationHelper(Application context) {
         this.context = context;
@@ -173,26 +173,28 @@ public class RNPushNotificationHelper {
         JSPushNotificationTask.setHangUpRunable(janusGroupIdKey, hangUpTimeoutRunable, delay);
     }
 
-    public void sendToCallNotifications(Bundle bundle) {
-        System.out.println("[sendToCallNotifications][arguments]");
-        System.out.println(bundle);
+    public void sendToCallNotifications(Bundle bundle, boolean onlyForegroundService) {
+        boolean isWithFillScreenIntent = RNPushNotification.isAndroidXOrHigher && !onlyForegroundService;
+        Random randomIds = new Random();
         Class intentClass = getMainActivityClass();
         try {
+            bundle.putBoolean("userInteraction", true);
+            bundle.putBoolean("foreground", true);
+            bundle.putBoolean("foregroundCall", true);
             if (intentClass == null) {
                 Log.e(LOG_TAG, "No activity class found for the notification");
                 return;
             }
 
             String title = bundle.getString("title");
-//            String contentText = bundle.getString("message", "");
 
-            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_CALL_ID)
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, isWithFillScreenIntent ? NOTIFICATION_CHANNEL_ID : NOTIFICATION_CHANNEL_CALL_ID)
                     .setContentTitle(title)
-//                    .setContentText(contentText)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setOngoing(true)
-                    .setColor(greedColor);
+                    .setColor(blueColor)
+                    .setCategory(NotificationCompat.CATEGORY_CALL);
 
             Resources res = context.getResources();
             String packageName = context.getPackageName();
@@ -216,28 +218,62 @@ public class RNPushNotificationHelper {
 
             notificationBuilder.setSmallIcon(smallIconResId);
 
-            bundle.putBoolean("userInteraction", true);
-            bundle.putBoolean("foreground", true);
-            bundle.putBoolean("foregroundCall", true);
-
-            System.out.println("[IntentBundle]: " + bundle);
+            if (isWithFillScreenIntent) {
+                String contentText = bundle.getString("message");
+                if (contentText != null) {
+                    if (title == null) {
+                        notificationBuilder.setContentTitle(contentText);
+                    } else {
+                        notificationBuilder.setContentText(contentText);
+                    }
+                }
+            }
 
             Intent intent = new Intent(context, intentClass);
-            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             intent.putExtra(NOTIFICATION_BUNDLE, bundle);
-            int pandingIntentId = ("" + System.currentTimeMillis()).hashCode();
-            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pandingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
+            int pendingIntentId = randomIds.nextInt();
+            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
             notificationBuilder.setContentIntent(contentPendingIntent);
 
+            if (isWithFillScreenIntent) {
+                Intent fullScreenIntent = new Intent(context, intentClass);
+                fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                fullScreenIntent.putExtra(NOTIFICATION_BUNDLE, bundle);
+
+                int pendingFullScreenIntentId = randomIds.nextInt();
+                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, pendingFullScreenIntentId, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                notificationBuilder.setFullScreenIntent(fullScreenPendingIntent, true);
+
+                Intent answerIntent = new Intent(context, intentClass);
+                answerIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                Bundle answerBundle = new Bundle(bundle);
+                answerBundle.putBoolean("answer", true);
+                answerIntent.putExtra(NOTIFICATION_BUNDLE, answerBundle);
+
+                int pendingAnswerIntentId = randomIds.nextInt();
+                PendingIntent answerPendingIntent = PendingIntent.getActivity(context, pendingAnswerIntentId, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                Intent declineIntent = new Intent(context, JSPushNotificationTask.class);
+                Bundle declineBundle = new Bundle(bundle);
+                declineBundle.putBoolean("decline", true);
+                declineBundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.END_CALL_TASK_KEY);
+                declineIntent.putExtras(declineBundle);
+
+                int pendingDeclineIntentId = randomIds.nextInt();
+                PendingIntent declinePendingIntent = PendingIntent.getService(context, pendingDeclineIntentId, declineIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                notificationBuilder.addAction(0, "Accept", answerPendingIntent);
+                notificationBuilder.addAction(0, "Decline", declinePendingIntent);
+            }
+
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager, true);
+            checkOrCreateChannel(notificationManager, !isWithFillScreenIntent);
 
             Notification notification = notificationBuilder.build();
 
             notification.flags = notification.flags | Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE;
-
-//            notificationManager.notify(notificationID, notification);
 
             Intent startCallServiceIntent = new Intent(context, CallsService.class);
             Bundle startServiceBundle = new Bundle();
@@ -304,7 +340,7 @@ public class RNPushNotificationHelper {
                     .setAutoCancel(true)
                     .setShowWhen(true)
                     .setGroup(dialog)
-                    .setColor(greedColor)
+                    .setColor(blueColor)
                     .setPriority(NotificationCompat.PRIORITY_MAX);
 
             Resources res = context.getResources();

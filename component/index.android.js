@@ -142,8 +142,8 @@ NotificationsComponent.prototype.launchApp = function(launchOptions) {
 	return RNPushNotification.launchApp(launchOptions);
 }
 
-NotificationsComponent.prototype.backToForeground = function() {
-	return RNPushNotification.backToForeground();
+NotificationsComponent.prototype.backToForeground = function(options = {}) {
+	return RNPushNotification.backToForeground(options);
 }
 
 NotificationsComponent.prototype.cancelCallNotification = function() {

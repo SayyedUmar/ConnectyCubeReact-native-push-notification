@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -36,6 +37,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     private final Random mRandomNumberGenerator = new Random(System.currentTimeMillis());
     private RNPushNotificationJsDelivery mJsDelivery;
     private Application applicationContext;
+    public static boolean isAndroidXOrHigher = Build.VERSION.SDK_INT > Build.VERSION_CODES.P;
 
     public RNPushNotification(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -75,7 +77,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
     public void onNewIntent(Intent intent) {
         Bundle bundle = this.getBundleFromIntent(intent);
-        if (bundle != null && !bundle.containsKey("foregroundCall")) {
+        if (bundle != null) {
             bundle.putBoolean("foreground", false);
             intent.putExtra("notification", bundle);
             mJsDelivery.notifyNotification(bundle);
@@ -151,7 +153,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     @ReactMethod
     public void createCallNotification(ReadableMap details) {
         Bundle bundle = Arguments.toBundle(details);
-        mRNPushNotificationHelper.sendToCallNotifications(bundle);
+        mRNPushNotificationHelper.sendToCallNotifications(bundle, true);
     }
 
     @ReactMethod
@@ -299,21 +301,29 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
-    public void backToForeground() {
-        String packageName = applicationContext.getApplicationContext().getPackageName();
-        Intent focusIntent = applicationContext.getPackageManager().getLaunchIntentForPackage(packageName).cloneFilter();
-        focusIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        Activity activity = getCurrentActivity();
-        activity.startActivity(focusIntent);
+    public void backToForeground(ReadableMap notificationBundle) {
+        if (isAndroidXOrHigher) {
+            mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationBundle), false);
+        } else {
+            String packageName = applicationContext.getApplicationContext().getPackageName();
+            Intent focusIntent = applicationContext.getPackageManager().getLaunchIntentForPackage(packageName).cloneFilter();
+            focusIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            Activity activity = getCurrentActivity();
+            activity.startActivity(focusIntent);
+        }
     }
 
     @ReactMethod
     public void launchApp(ReadableMap notificationData) {
-        Intent launchIntent = new Intent(applicationContext, getMainActivityClass(applicationContext));
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Bundle launchIntentDateBundle = Arguments.toBundle(notificationData);
-        launchIntent.putExtra("notification", launchIntentDateBundle);
-        applicationContext.startActivity(launchIntent);
+        if (isAndroidXOrHigher) {
+            mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData), false);
+        } else {
+            Intent launchIntent = new Intent(applicationContext, getMainActivityClass(applicationContext));
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Bundle launchIntentDateBundle = Arguments.toBundle(notificationData);
+            launchIntent.putExtra("notification", launchIntentDateBundle);
+            applicationContext.startActivity(launchIntent);
+        }
     }
 
     public Class getMainActivityClass(Context context) {

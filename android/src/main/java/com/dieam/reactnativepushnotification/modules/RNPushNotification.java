@@ -171,7 +171,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
             bundle.remove("id");
         }
 
-        mRNPushNotificationHelper.sendToMessagingNotificatios(bundle);
+        mRNPushNotificationHelper.sendToMessagingNotifications(bundle);
     }
 
     @ReactMethod

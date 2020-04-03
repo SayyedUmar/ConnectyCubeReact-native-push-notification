@@ -15,12 +15,14 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.RemoteInput;
 
@@ -269,7 +271,7 @@ public class RNPushNotificationHelper {
             }
 
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager, !isWithFillScreenIntent);
+            checkOrCreateChannel(notificationManager, !isWithFillScreenIntent, null);
 
             Notification notification = notificationBuilder.build();
 
@@ -286,7 +288,7 @@ public class RNPushNotificationHelper {
         }
     }
 
-    public void sendToMessagingNotificatios(Bundle bundle) {
+    public void sendToMessagingNotifications(Bundle bundle) {
         System.out.println("[sendToMessagingNotificatios][arguments]");
         System.out.println(bundle);
 
@@ -345,10 +347,10 @@ public class RNPushNotificationHelper {
 
             Resources res = context.getResources();
             String packageName = context.getPackageName();
+            String soundName = bundle.getString("soundName");
 
             if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
                 Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                String soundName = bundle.getString("soundName");
                 if (soundName != null) {
                     if (!"default".equalsIgnoreCase(soundName)) {
 
@@ -486,7 +488,7 @@ public class RNPushNotificationHelper {
 
 
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager, false);
+            checkOrCreateChannel(notificationManager, false, soundName);
 
             Notification notification = notificationBuilder.build();
 
@@ -675,7 +677,7 @@ public class RNPushNotificationHelper {
           PendingIntent.FLAG_UPDATE_CURRENT);
 
         NotificationManager notificationManager = notificationManager();
-        checkOrCreateChannel(notificationManager, false);
+        checkOrCreateChannel(notificationManager, false, null);
 
         notification.setContentIntent(pendingIntent);
 
@@ -982,7 +984,7 @@ public class RNPushNotificationHelper {
                     PendingIntent.FLAG_UPDATE_CURRENT);
 
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager, false);
+            checkOrCreateChannel(notificationManager, false, null);
 
             notification.setContentIntent(pendingIntent);
 
@@ -1190,9 +1192,29 @@ public class RNPushNotificationHelper {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void setNotificationChanneSound(NotificationChannel channel, String soundName) {
+        if (soundName == null) {
+            return;
+        }
+        int resId;
+        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
+            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+        } else {
+            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
+            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+        }
+        Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build();
+        channel.setSound(soundUri, audioAttributes);
+    }
+
     private static boolean channelCreated = false;
     private static boolean channelCallCreated = false;
-    private void checkOrCreateChannel(NotificationManager manager, boolean isCallChannel) {
+    private void checkOrCreateChannel(NotificationManager manager, boolean isCallChannel, String soundName) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             return;
         if (isCallChannel ? channelCallCreated : channelCreated)
@@ -1211,6 +1233,7 @@ public class RNPushNotificationHelper {
         } else {
             channel.setSound(null, null);
         }
+        setNotificationChanneSound(channel, soundName);
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
         manager.createNotificationChannel(channel);

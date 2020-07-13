@@ -150,6 +150,10 @@ NotificationsComponent.prototype.cancelCallNotification = function() {
 	return RNPushNotification.cancelCallNotification();
 }
 
+NotificationsComponent.prototype.updateMessageNotificationSettings = function(options = {}) {
+	return RNPushNotification.updateMessageNotificationSettings(options);
+}
+
 module.exports = {
 	state: false,
 	component: new NotificationsComponent()

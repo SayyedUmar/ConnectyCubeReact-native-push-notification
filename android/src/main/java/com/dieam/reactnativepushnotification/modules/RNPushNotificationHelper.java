@@ -61,10 +61,13 @@ public class RNPushNotificationHelper {
 
     private int blueColor = Color.argb(255, 67, 163, 204);
 
+    public NotificationChannelManager notificationChannelManager;
+
     public RNPushNotificationHelper(Application context) {
         this.context = context;
         this.config = new RNPushNotificationConfig(context);
         this.scheduledNotificationsPersistence = context.getSharedPreferences(RNPushNotificationHelper.PREFERENCES_KEY, Context.MODE_PRIVATE);
+        notificationChannelManager = new NotificationChannelManager(context);
     }
 
     public static void clearMessage()
@@ -311,11 +314,12 @@ public class RNPushNotificationHelper {
 
             boolean isPrivateDialog = bundle.getBoolean("is_private");
             String dialog = bundle.getString("dialog");
-
+            String notificationChannelType = bundle.getString("сhannelType");
+            NotificationChannelManager.CHANNELS channelType = notificationChannelManager.getType(notificationChannelType);
 
             ArrayList<Bundle> allMessages = RNPushNotificationMessageLine.addLineToNotification(notificationID, bundle);
 
-            NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
+            NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(context, Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? notificationChannelManager.createChannelIfNotExists(channelType) : NOTIFICATION_CHANNEL_ID);
 
             NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(MESSAGING_STYLE_TEXT);
 
@@ -331,6 +335,7 @@ public class RNPushNotificationHelper {
 
             for(Bundle messageBundle : allMessages) {
                 message_ids.add(messageBundle.getString("message_id"));
+
                 messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
 
@@ -347,28 +352,9 @@ public class RNPushNotificationHelper {
 
             Resources res = context.getResources();
             String packageName = context.getPackageName();
-            String soundName = bundle.getString("soundName");
 
-            if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
-                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                if (soundName != null) {
-                    if (!"default".equalsIgnoreCase(soundName)) {
-
-                        // sound name can be full filename, or just the resource name.
-                        // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
-                        // The reason is to make the iOS and android javascript interfaces compatible
-
-                        int resId;
-                        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
-                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-                        } else {
-                            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
-                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-                        }
-
-                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
-                    }
-                }
+            Uri soundUri = getNotificationSound(bundle);
+            if (soundUri != null) {
                 notificationBuilder.setSound(soundUri);
             }
 
@@ -488,7 +474,7 @@ public class RNPushNotificationHelper {
 
 
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager, false, soundName);
+//            checkOrCreateChannel(notificationManager, false, soundName);
 
             Notification notification = notificationBuilder.build();
 
@@ -628,29 +614,10 @@ public class RNPushNotificationHelper {
 
           bundle.putBoolean("userInteraction", true);
 
-        if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
-          Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-          String soundName = bundle.getString("soundName");
-          if (soundName != null) {
-            if (!"default".equalsIgnoreCase(soundName)) {
-
-              // sound name can be full filename, or just the resource name.
-              // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
-              // The reason is to make the iOS and android javascript interfaces compatible
-
-              int resId;
-              if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
-                resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-              } else {
-                soundName = soundName.substring(0, soundName.lastIndexOf('.'));
-                resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-              }
-
-              soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
-            }
+          Uri soundUri = getNotificationSound(bundle);
+          if (soundUri != null) {
+              notification.setSound(soundUri);
           }
-          notification.setSound(soundUri);
-        }
 
         if (bundle.containsKey("ongoing") || bundle.getBoolean("ongoing")) {
           notification.setOngoing(bundle.getBoolean("ongoing"));
@@ -1192,6 +1159,15 @@ public class RNPushNotificationHelper {
         }
     }
 
+    public Uri getNotificationSound(Bundle bundle) {
+        String soundName = bundle.getString("soundName");
+        boolean playSound = bundle.getBoolean("playSound", true);
+        if (!playSound) {
+            return null;
+        }
+        return ChannelSettings.getSoundUri(context, soundName);
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void setNotificationChanneSound(NotificationChannel channel, String soundName) {
         if (soundName == null) {
@@ -1201,8 +1177,13 @@ public class RNPushNotificationHelper {
         if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
             resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
         } else {
-            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
-            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+            int soundExtDotIndex = soundName.lastIndexOf('.');
+            if (soundExtDotIndex != -1) {
+                soundName = soundName.substring(0, soundName.lastIndexOf('.'));
+                resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+            } else {
+                return;
+            }
         }
         Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
         AudioAttributes audioAttributes = new AudioAttributes.Builder()

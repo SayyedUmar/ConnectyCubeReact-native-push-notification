@@ -38,6 +38,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     private RNPushNotificationJsDelivery mJsDelivery;
     private Application applicationContext;
     public static boolean isAndroidXOrHigher = Build.VERSION.SDK_INT > Build.VERSION_CODES.P;
+    public NotificationChannelManager notificationChannelManager;
 
     public RNPushNotification(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -48,6 +49,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
         // The @ReactNative methods use this
         mRNPushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+        notificationChannelManager = new NotificationChannelManager(reactContext);
         // This is used to delivery callbacks to JS
         mJsDelivery = new RNPushNotificationJsDelivery(reactContext);
 
@@ -324,6 +326,23 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
             launchIntent.putExtra("notification", launchIntentDateBundle);
             applicationContext.startActivity(launchIntent);
         }
+    }
+
+    @ReactMethod
+    public void updateMessageNotificationSettings(ReadableMap notificationSettings, Promise promise) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            promise.resolve(true);
+            return;
+        }
+        String notificationType = notificationSettings.getString("сhannelType");
+        NotificationChannelManager.CHANNELS channelType = notificationChannelManager.getType(notificationType);
+        if (notificationSettings.hasKey("sound")) {
+            notificationChannelManager.updateChannelSound(channelType, notificationSettings.getString("sound"));
+        }
+        if (notificationSettings.hasKey("vibrate")) {
+            notificationChannelManager.updateChannelVibration(channelType, notificationSettings.getBoolean("vibrate"));
+        }
+        promise.resolve(true);
     }
 
     public Class getMainActivityClass(Context context) {

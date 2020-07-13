@@ -391,4 +391,12 @@ Notifications.clearAllNotifications = function() {
 	return this.callNative('clearAllNotifications', arguments)
 }
 
+Notifications.updateMessageNotificationSettings = function() {
+	// Only available for Android
+	if (Platform.OS === 'android') {
+		return this.callNative('updateMessageNotificationSettings', arguments)
+	}
+	return Promise.resolve()
+}
+
 module.exports = Notifications;

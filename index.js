@@ -16,7 +16,7 @@ var Notifications = {
 	onRegister: false,
 	onError: false,
 	onNotification: false,
-  onRemoteFetch: false,
+  	onRemoteFetch: false,
 	isLoaded: false,
 	hasPoppedInitialNotification: false,
 
@@ -26,14 +26,21 @@ var Notifications = {
 		alert: true,
 		badge: true,
 		sound: true
-  },
+  	},
 
-  JS_BACKGROUND_TASKS_KEYS: {
-    START_CALL_TASK_KEY: 'START_CALL_TASK_KEY',
-    END_CALL_TASK_KEY: 'END_CALL_TASK_KEY',
-    NOTIFY_TASK_KEY: 'NOTIFY_TASK_KEY',
-    MARK_AS_READ_TASK_KEY: 'MARK_AS_READ_TASK_KEY',
-    REPLY_TASK_KEY: 'REPLY_TASK_KEY'
+  	JS_BACKGROUND_TASKS_KEYS: {
+		START_CALL_TASK_KEY: 'START_CALL_TASK_KEY',
+		END_CALL_TASK_KEY: 'END_CALL_TASK_KEY',
+		NOTIFY_TASK_KEY: 'NOTIFY_TASK_KEY',
+		MARK_AS_READ_TASK_KEY: 'MARK_AS_READ_TASK_KEY',
+		REPLY_TASK_KEY: 'REPLY_TASK_KEY'
+	},
+
+	CHANNELS: {
+		IN_APP_MESSAGES: 'IN_APP_MESSAGES',
+		IN_APP_GROUP: 'IN_APP_GROUP',
+		PUSH_MESSAGES: 'PUSH_MESSAGES',
+		CALLS: 'CALLS'
 	}
 };
 

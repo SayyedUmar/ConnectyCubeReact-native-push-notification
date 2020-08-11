@@ -61,6 +61,23 @@ public class ChannelSettings {
         soundUri = getSoundUri(context, DEFAULT_CALL_SOUND);
     }
 
+    public boolean checkSoundIsSame(Uri soundUri) {
+        if (this.soundUri == null && soundUri == null) {
+            return true;
+        }
+        if (this.soundUri == null && soundUri != null) {
+            return false;
+        }
+        if (soundUri == null && this.soundUri != null) {
+            return false;
+        }
+        return this.soundUri.compareTo(soundUri) == 0;
+    }
+
+    public boolean checkVibrationStateIsSame(boolean vibration) {
+        return vibration == this.vibration;
+    }
+
     public static Uri getSoundUri(Context context, String soundName) {
         if (soundName == null || soundName.equals("NONE")) {
             return null;

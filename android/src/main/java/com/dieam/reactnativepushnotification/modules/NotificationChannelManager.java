@@ -155,7 +155,11 @@ public class NotificationChannelManager {
     public void updateChannelSound(CHANNELS channel, String soundName) {
         NotificationChannel oldChannel = notificationManager.getNotificationChannel(createChannelIfNotExists(channel));
         ChannelSettings settings = new ChannelSettings(context, oldChannel);
-        settings.soundUri = settings.getSoundUri(context, soundName);
+        Uri newSoundUri = settings.getSoundUri(context, soundName);
+        if (settings.checkSoundIsSame(newSoundUri)) {
+            return;
+        }
+        settings.soundUri = newSoundUri;
         updateChannel(channel, settings);
     }
 
@@ -163,6 +167,9 @@ public class NotificationChannelManager {
     public void updateChannelVibration(CHANNELS channel, boolean shouldVibrate) {
         NotificationChannel oldChannel = notificationManager.getNotificationChannel(createChannelIfNotExists(channel));
         ChannelSettings settings = new ChannelSettings(context, oldChannel);
+        if (settings.checkVibrationStateIsSame(shouldVibrate)) {
+            return;
+        }
         settings.vibration = shouldVibrate;
         updateChannel(channel, settings);
     }

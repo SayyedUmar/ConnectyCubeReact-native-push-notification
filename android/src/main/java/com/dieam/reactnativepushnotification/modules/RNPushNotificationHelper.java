@@ -210,7 +210,7 @@ public class RNPushNotificationHelper {
             if (smallIcon != null) {
                 smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
             } else {
-                smallIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+                smallIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
             }
 
             if (smallIconResId == 0) {
@@ -219,6 +219,10 @@ public class RNPushNotificationHelper {
                 if (smallIconResId == 0) {
                     smallIconResId = android.R.drawable.ic_dialog_info;
                 }
+            }
+
+            if (largeIconResId != 0 && (largeIcon != null || Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)) {
+                notification.setLargeIcon(largeIconBitmap);
             }
 
             notificationBuilder.setSmallIcon(smallIconResId);
@@ -358,8 +362,6 @@ public class RNPushNotificationHelper {
                 notificationBuilder.setSound(soundUri);
             }
 
-            String largeIcon = bundle.getString("largeIcon");
-
             String numberString = bundle.getString("number", hashMapDialogsToMessages.getCountOfMessage() + "");
             if (numberString != null) {
                 notificationBuilder.setNumber(Integer.parseInt(numberString));
@@ -369,6 +371,7 @@ public class RNPushNotificationHelper {
             int largeIconResId;
 
             String smallIcon = bundle.getString("smallIcon");
+            String largeIcon = bundle.getString("largeIcon");
 
             if (smallIcon != null) {
                 smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
@@ -387,7 +390,15 @@ public class RNPushNotificationHelper {
             if (largeIcon != null) {
                 largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
             } else {
+                largeIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (largeIconResId == 0) {
                 largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (largeIconResId == 0) {
+                    largeIconResId = android.R.drawable.ic_dialog_info;
+                }
             }
 
             Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);
@@ -601,7 +612,15 @@ public class RNPushNotificationHelper {
         if (largeIcon != null) {
           largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
         } else {
-          largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+          largeIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+        }
+
+        if (largeIconResId == 0) {
+            largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+            if (largeIconResId == 0) {
+                largeIconResId = android.R.drawable.ic_dialog_info;
+            }
         }
 
         Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);
@@ -882,7 +901,15 @@ public class RNPushNotificationHelper {
             if (largeIcon != null) {
                 largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
             } else {
+                largeIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (largeIconResId == 0) {
                 largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (largeIconResId == 0) {
+                    largeIconResId = android.R.drawable.ic_dialog_info;
+                }
             }
 
             Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);

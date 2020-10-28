@@ -57,6 +57,11 @@ NotificationsComponent.prototype.presentLocalNotification = function(details: Ob
 
 /** ConnectyCube Group Notifications */
 
+NotificationsComponent.prototype.createCallNotification = function(details: Object) {
+  console.log('[createCallNotification][params][index.android]', details)
+	RNPushNotification.createCallNotification(details);
+}
+
 NotificationsComponent.prototype.createMessageNotification = function(details: Object) {
 	console.log('[RNLocalNotifications][params][index.android]', details)
 	RNPushNotification.createMessageNotification(details);
@@ -66,18 +71,6 @@ NotificationsComponent.prototype.createGroupNotification = function(details: Obj
 	//console.log('[RNLocalNotifications][params][index.android]', details)
 	RNPushNotification.createGroupNotification(details);
 };
-
-NotificationsComponent.prototype.registerBackgroundTaskNotify = function(taskName) {
-  RNPushNotification.registerBackgroundTaskNotify(taskName)
-}
-
-NotificationsComponent.prototype.registerBackgroundTaskMarkAsRead = function(taskName) {
-  RNPushNotification.registerBackgroundTaskMarkAsRead(taskName)
-}
-
-NotificationsComponent.prototype.registerBackgroundTasReply = function(taskName) {
-  RNPushNotification.registerBackgroundTasReply(taskName)
-}
 
 NotificationsComponent.prototype.scheduleLocalNotification = function(details: Object) {
 	RNPushNotification.scheduleLocalNotification(details);
@@ -143,6 +136,22 @@ NotificationsComponent.prototype.registerNotificationActions = function(details:
 
 NotificationsComponent.prototype.clearAllNotifications = function() {
 	RNPushNotification.clearAllNotifications()
+}
+
+NotificationsComponent.prototype.launchApp = function(launchOptions) {
+	return RNPushNotification.launchApp(launchOptions);
+}
+
+NotificationsComponent.prototype.backToForeground = function(options = {}) {
+	return RNPushNotification.backToForeground(options);
+}
+
+NotificationsComponent.prototype.cancelCallNotification = function() {
+	return RNPushNotification.cancelCallNotification();
+}
+
+NotificationsComponent.prototype.updateMessageNotificationSettings = function(options = {}) {
+	return RNPushNotification.updateMessageNotificationSettings(options);
 }
 
 module.exports = {

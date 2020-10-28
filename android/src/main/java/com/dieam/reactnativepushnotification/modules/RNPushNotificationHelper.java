@@ -15,12 +15,14 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.RemoteInput;
 
@@ -31,6 +33,7 @@ import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 import static com.dieam.reactnativepushnotification.modules.RNPushNotification.LOG_TAG;
 import static com.dieam.reactnativepushnotification.modules.RNPushNotificationAttributes.fromJson;
@@ -39,26 +42,32 @@ public class RNPushNotificationHelper {
     public static final String PREFERENCES_KEY = "rn_push_notification";
     private static final long DEFAULT_VIBRATION = 300L;
     private static final String NOTIFICATION_CHANNEL_ID = "rn-push-notification-channel-id";
+    private static final String NOTIFICATION_CHANNEL_CALL_ID = "rn-push-notification-channel-call-id";
     private static final String NOTIFICATION_GROUP_ID = "rn-push-notification-group-id";
     private static final int NOTIFICATION_WITH_GROUP_ID = 6784;
     public static final String CLEAR_MESSAGE = "CLEAR_MESSAGE";
     public static final String NOTIFICATION_BUNDLE = "notification";
     public static final String DELETE_MESSAGE = "DELETE_MESSAGE";
     public static final String MESSAGING_STYLE_TEXT = "";
-
+    private static final int ONE_MINUTE = 60 * 1000;
+    private static final long ONE_HOUR = 60 * ONE_MINUTE;
+    private static final long ONE_DAY = 24 * ONE_HOUR;
     private static final RNPushNotificationsMessages hashMapDialogsToMessages = new RNPushNotificationsMessages();
+
 
     private Context context;
     private RNPushNotificationConfig config;
     private final SharedPreferences scheduledNotificationsPersistence;
-    private static final int ONE_MINUTE = 60 * 1000;
-    private static final long ONE_HOUR = 60 * ONE_MINUTE;
-    private static final long ONE_DAY = 24 * ONE_HOUR;
+
+    private int blueColor = Color.argb(255, 67, 163, 204);
+
+    public NotificationChannelManager notificationChannelManager;
 
     public RNPushNotificationHelper(Application context) {
         this.context = context;
         this.config = new RNPushNotificationConfig(context);
         this.scheduledNotificationsPersistence = context.getSharedPreferences(RNPushNotificationHelper.PREFERENCES_KEY, Context.MODE_PRIVATE);
+        notificationChannelManager = new NotificationChannelManager(context);
     }
 
     public static void clearMessage()
@@ -153,7 +162,140 @@ public class RNPushNotificationHelper {
             getAlarmManager().set(AlarmManager.RTC_WAKEUP, fireDate, pendingIntent);
         }
     }
-    public void sendToMessagingNotificatios(Bundle bundle) {
+
+    private void setTimeoutCancelNotification(final Context appContext, final Bundle callHangUpTimeoutIntentBundle, long delay) {
+        Runnable hangUpTimeoutRunable = new Runnable() {
+            @Override
+            public void run() {
+                Intent actionIntent = new Intent(context, JSPushNotificationTask.class);
+                actionIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                actionIntent.setAction(context.getPackageName() + "." + callHangUpTimeoutIntentBundle.getString("action"));
+                actionIntent.putExtras(callHangUpTimeoutIntentBundle);
+                appContext.startService(actionIntent);
+            }
+        };
+        String janusGroupIdKey = callHangUpTimeoutIntentBundle.getString("janusGroupId");
+        JSPushNotificationTask.setHangUpRunable(janusGroupIdKey, hangUpTimeoutRunable, delay);
+    }
+
+    public void sendToCallNotifications(Bundle bundle, boolean onlyForegroundService) {
+        boolean isWithFillScreenIntent = RNPushNotification.isAndroidXOrHigher && !onlyForegroundService;
+        Random randomIds = new Random();
+        Class intentClass = getMainActivityClass();
+        try {
+            bundle.putBoolean("userInteraction", true);
+            bundle.putBoolean("foreground", true);
+            bundle.putBoolean("foregroundCall", true);
+            if (intentClass == null) {
+                Log.e(LOG_TAG, "No activity class found for the notification");
+                return;
+            }
+
+            String title = bundle.getString("title");
+
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, isWithFillScreenIntent ? NOTIFICATION_CHANNEL_ID : NOTIFICATION_CHANNEL_CALL_ID)
+                    .setContentTitle(title)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setOngoing(true)
+                    .setColor(blueColor)
+                    .setCategory(NotificationCompat.CATEGORY_CALL);
+
+            Resources res = context.getResources();
+            String packageName = context.getPackageName();
+
+            String smallIcon = bundle.getString("smallIcon");
+            int smallIconResId = 0;
+
+            if (smallIcon != null) {
+                smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
+            } else {
+                smallIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (smallIconResId == 0) {
+                smallIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (smallIconResId == 0) {
+                    smallIconResId = android.R.drawable.ic_dialog_info;
+                }
+            }
+
+            if (largeIconResId != 0 && (largeIcon != null || Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)) {
+                notification.setLargeIcon(largeIconBitmap);
+            }
+
+            notificationBuilder.setSmallIcon(smallIconResId);
+
+            if (isWithFillScreenIntent) {
+                String contentText = bundle.getString("message");
+                if (contentText != null) {
+                    if (title == null) {
+                        notificationBuilder.setContentTitle(contentText);
+                    } else {
+                        notificationBuilder.setContentText(contentText);
+                    }
+                }
+            }
+
+            Intent intent = new Intent(context, intentClass);
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            intent.putExtra(NOTIFICATION_BUNDLE, bundle);
+
+            int pendingIntentId = randomIds.nextInt();
+            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            notificationBuilder.setContentIntent(contentPendingIntent);
+
+            if (isWithFillScreenIntent) {
+                Intent fullScreenIntent = new Intent(context, intentClass);
+                fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                fullScreenIntent.putExtra(NOTIFICATION_BUNDLE, bundle);
+
+                int pendingFullScreenIntentId = randomIds.nextInt();
+                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, pendingFullScreenIntentId, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                notificationBuilder.setFullScreenIntent(fullScreenPendingIntent, true);
+
+                Intent answerIntent = new Intent(context, intentClass);
+                answerIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                Bundle answerBundle = new Bundle(bundle);
+                answerBundle.putBoolean("answer", true);
+                answerIntent.putExtra(NOTIFICATION_BUNDLE, answerBundle);
+
+                int pendingAnswerIntentId = randomIds.nextInt();
+                PendingIntent answerPendingIntent = PendingIntent.getActivity(context, pendingAnswerIntentId, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                Intent declineIntent = new Intent(context, JSPushNotificationTask.class);
+                Bundle declineBundle = new Bundle(bundle);
+                declineBundle.putBoolean("decline", true);
+                declineBundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.END_CALL_TASK_KEY);
+                declineIntent.putExtras(declineBundle);
+
+                int pendingDeclineIntentId = randomIds.nextInt();
+                PendingIntent declinePendingIntent = PendingIntent.getService(context, pendingDeclineIntentId, declineIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                notificationBuilder.addAction(0, "Accept", answerPendingIntent);
+                notificationBuilder.addAction(0, "Decline", declinePendingIntent);
+            }
+
+            NotificationManager notificationManager = notificationManager();
+            checkOrCreateChannel(notificationManager, !isWithFillScreenIntent, null);
+
+            Notification notification = notificationBuilder.build();
+
+            notification.flags = notification.flags | Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE;
+
+            Intent startCallServiceIntent = new Intent(context, CallsService.class);
+            Bundle startServiceBundle = new Bundle();
+            startServiceBundle.putParcelable("notification", notification);
+            startCallServiceIntent.putExtras(startServiceBundle);
+            context.startService(startCallServiceIntent);
+
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "failed to send push notification", e);
+        }
+    }
+
+    public void sendToMessagingNotifications(Bundle bundle) {
         System.out.println("[sendToMessagingNotificatios][arguments]");
         System.out.println(bundle);
 
@@ -176,11 +318,12 @@ public class RNPushNotificationHelper {
 
             boolean isPrivateDialog = bundle.getBoolean("is_private");
             String dialog = bundle.getString("dialog");
-
+            String notificationChannelType = bundle.getString("сhannelType");
+            NotificationChannelManager.CHANNELS channelType = notificationChannelManager.getType(notificationChannelType);
 
             ArrayList<Bundle> allMessages = RNPushNotificationMessageLine.addLineToNotification(notificationID, bundle);
 
-            NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
+            NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(context, Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? notificationChannelManager.createChannelIfNotExists(channelType) : NOTIFICATION_CHANNEL_ID);
 
             NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(MESSAGING_STYLE_TEXT);
 
@@ -196,10 +339,9 @@ public class RNPushNotificationHelper {
 
             for(Bundle messageBundle : allMessages) {
                 message_ids.add(messageBundle.getString("message_id"));
+
                 messagingStyle.addMessage(messageBundle.getString("message"), 0, messageBundle.getString("sender"));
             }
-
-            int greedColor = Color.argb(255, 1, 117, 37);
 
             notificationBuilder
                     .setContentTitle(dialog)
@@ -209,37 +351,16 @@ public class RNPushNotificationHelper {
                     .setAutoCancel(true)
                     .setShowWhen(true)
                     .setGroup(dialog)
-                    .setColor(greedColor)
+                    .setColor(blueColor)
                     .setPriority(NotificationCompat.PRIORITY_MAX);
 
             Resources res = context.getResources();
             String packageName = context.getPackageName();
 
-            if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
-                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                String soundName = bundle.getString("soundName");
-                if (soundName != null) {
-                    if (!"default".equalsIgnoreCase(soundName)) {
-
-                        // sound name can be full filename, or just the resource name.
-                        // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
-                        // The reason is to make the iOS and android javascript interfaces compatible
-
-                        int resId;
-                        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
-                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-                        } else {
-                            soundName = soundName.substring(0, soundName.lastIndexOf('.'));
-                            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-                        }
-
-                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
-                    }
-                }
+            Uri soundUri = getNotificationSound(bundle);
+            if (soundUri != null) {
                 notificationBuilder.setSound(soundUri);
             }
-
-            String largeIcon = bundle.getString("largeIcon");
 
             String numberString = bundle.getString("number", hashMapDialogsToMessages.getCountOfMessage() + "");
             if (numberString != null) {
@@ -250,6 +371,7 @@ public class RNPushNotificationHelper {
             int largeIconResId;
 
             String smallIcon = bundle.getString("smallIcon");
+            String largeIcon = bundle.getString("largeIcon");
 
             if (smallIcon != null) {
                 smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
@@ -268,7 +390,15 @@ public class RNPushNotificationHelper {
             if (largeIcon != null) {
                 largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
             } else {
+                largeIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (largeIconResId == 0) {
                 largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (largeIconResId == 0) {
+                    largeIconResId = android.R.drawable.ic_dialog_info;
+                }
             }
 
             Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);
@@ -355,7 +485,7 @@ public class RNPushNotificationHelper {
 
 
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager);
+//            checkOrCreateChannel(notificationManager, false, soundName);
 
             Notification notification = notificationBuilder.build();
 
@@ -482,7 +612,15 @@ public class RNPushNotificationHelper {
         if (largeIcon != null) {
           largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
         } else {
-          largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+          largeIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+        }
+
+        if (largeIconResId == 0) {
+            largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+            if (largeIconResId == 0) {
+                largeIconResId = android.R.drawable.ic_dialog_info;
+            }
         }
 
         Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);
@@ -495,29 +633,10 @@ public class RNPushNotificationHelper {
 
           bundle.putBoolean("userInteraction", true);
 
-        if (!bundle.containsKey("playSound") || bundle.getBoolean("playSound")) {
-          Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-          String soundName = bundle.getString("soundName");
-          if (soundName != null) {
-            if (!"default".equalsIgnoreCase(soundName)) {
-
-              // sound name can be full filename, or just the resource name.
-              // So the strings 'my_sound.mp3' AND 'my_sound' are accepted
-              // The reason is to make the iOS and android javascript interfaces compatible
-
-              int resId;
-              if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
-                resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-              } else {
-                soundName = soundName.substring(0, soundName.lastIndexOf('.'));
-                resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
-              }
-
-              soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
-            }
+          Uri soundUri = getNotificationSound(bundle);
+          if (soundUri != null) {
+              notification.setSound(soundUri);
           }
-          notification.setSound(soundUri);
-        }
 
         if (bundle.containsKey("ongoing") || bundle.getBoolean("ongoing")) {
           notification.setOngoing(bundle.getBoolean("ongoing"));
@@ -544,7 +663,7 @@ public class RNPushNotificationHelper {
           PendingIntent.FLAG_UPDATE_CURRENT);
 
         NotificationManager notificationManager = notificationManager();
-        checkOrCreateChannel(notificationManager);
+        checkOrCreateChannel(notificationManager, false, null);
 
         notification.setContentIntent(pendingIntent);
 
@@ -782,7 +901,15 @@ public class RNPushNotificationHelper {
             if (largeIcon != null) {
                 largeIconResId = res.getIdentifier(largeIcon, "mipmap", packageName);
             } else {
+                largeIconResId = res.getIdentifier("ic_notification", "mipmap", packageName);
+            }
+
+            if (largeIconResId == 0) {
                 largeIconResId = res.getIdentifier("ic_launcher", "mipmap", packageName);
+
+                if (largeIconResId == 0) {
+                    largeIconResId = android.R.drawable.ic_dialog_info;
+                }
             }
 
             Bitmap largeIconBitmap = BitmapFactory.decodeResource(res, largeIconResId);
@@ -851,7 +978,7 @@ public class RNPushNotificationHelper {
                     PendingIntent.FLAG_UPDATE_CURRENT);
 
             NotificationManager notificationManager = notificationManager();
-            checkOrCreateChannel(notificationManager);
+            checkOrCreateChannel(notificationManager, false, null);
 
             notification.setContentIntent(pendingIntent);
 
@@ -1059,54 +1186,69 @@ public class RNPushNotificationHelper {
         }
     }
 
+    public Uri getNotificationSound(Bundle bundle) {
+        String soundName = bundle.getString("soundName");
+        boolean playSound = bundle.getBoolean("playSound", true);
+        if (!playSound) {
+            return null;
+        }
+        return ChannelSettings.getSoundUri(context, soundName);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void setNotificationChanneSound(NotificationChannel channel, String soundName) {
+        if (soundName == null) {
+            return;
+        }
+        int resId;
+        if (context.getResources().getIdentifier(soundName, "raw", context.getPackageName()) != 0) {
+            resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+        } else {
+            int soundExtDotIndex = soundName.lastIndexOf('.');
+            if (soundExtDotIndex != -1) {
+                soundName = soundName.substring(0, soundName.lastIndexOf('.'));
+                resId = context.getResources().getIdentifier(soundName, "raw", context.getPackageName());
+            } else {
+                return;
+            }
+        }
+        Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build();
+        channel.setSound(soundUri, audioAttributes);
+    }
+
     private static boolean channelCreated = false;
-    private void checkOrCreateChannel(NotificationManager manager) {
+    private static boolean channelCallCreated = false;
+    private void checkOrCreateChannel(NotificationManager manager, boolean isCallChannel, String soundName) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             return;
-        if (channelCreated)
+        if (isCallChannel ? channelCallCreated : channelCreated)
             return;
         if (manager == null)
             return;
 
-        Bundle bundle = new Bundle();
 
-        int importance = NotificationManager.IMPORTANCE_HIGH;
-        final String importanceString = bundle.getString("importance");
+        int importance = isCallChannel ? NotificationManager.IMPORTANCE_DEFAULT : NotificationManager.IMPORTANCE_HIGH;
 
-        if (importanceString != null) {
-            switch(importanceString.toLowerCase()) {
-                case "default":
-                    importance = NotificationManager.IMPORTANCE_DEFAULT;
-                    break;
-                case "max":
-                    importance = NotificationManager.IMPORTANCE_MAX;
-                    break;
-                case "high":
-                    importance = NotificationManager.IMPORTANCE_HIGH;
-                    break;
-                case "low":
-                    importance = NotificationManager.IMPORTANCE_LOW;
-                    break;
-                case "min":
-                    importance = NotificationManager.IMPORTANCE_MIN;
-                    break;
-                case "none":
-                    importance = NotificationManager.IMPORTANCE_NONE;
-                    break;
-                case "unspecified":
-                    importance = NotificationManager.IMPORTANCE_UNSPECIFIED;
-                    break;
-                default:
-                    importance = NotificationManager.IMPORTANCE_HIGH;
-            }
-        }
-
-        NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, this.config.getChannelName(), importance);
+        NotificationChannel channel = new NotificationChannel(isCallChannel ? NOTIFICATION_CHANNEL_CALL_ID : NOTIFICATION_CHANNEL_ID, this.config.getChannelName(), importance);
         channel.setDescription(this.config.getChannelDescription());
-        channel.enableLights(true);
-        channel.enableVibration(true);
+        if (!isCallChannel) {
+            channel.enableLights(true);
+            channel.enableVibration(true);
+        } else {
+            channel.setSound(null, null);
+        }
+        setNotificationChanneSound(channel, soundName);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
         manager.createNotificationChannel(channel);
-        channelCreated = true;
+        if (isCallChannel) {
+            channelCallCreated = true;
+        } else {
+            channelCreated = true;
+        }
     }
 }

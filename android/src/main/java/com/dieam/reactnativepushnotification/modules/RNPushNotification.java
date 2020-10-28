@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -35,16 +36,20 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     private RNPushNotificationHelper mRNPushNotificationHelper;
     private final Random mRandomNumberGenerator = new Random(System.currentTimeMillis());
     private RNPushNotificationJsDelivery mJsDelivery;
+    private Application applicationContext;
+    public static boolean isAndroidXOrHigher = Build.VERSION.SDK_INT > Build.VERSION_CODES.P;
+    public NotificationChannelManager notificationChannelManager;
 
     public RNPushNotification(ReactApplicationContext reactContext) {
         super(reactContext);
 
         reactContext.addActivityEventListener(this);
 
-        Application applicationContext = (Application) reactContext.getApplicationContext();
+        applicationContext = (Application) reactContext.getApplicationContext();
 
         // The @ReactNative methods use this
         mRNPushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+        notificationChannelManager = new NotificationChannelManager(reactContext);
         // This is used to delivery callbacks to JS
         mJsDelivery = new RNPushNotificationJsDelivery(reactContext);
 
@@ -148,17 +153,27 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     /** ConnectyCube Group Notifications **/
 
     @ReactMethod
+    public void createCallNotification(ReadableMap details) {
+        Bundle bundle = Arguments.toBundle(details);
+        mRNPushNotificationHelper.sendToCallNotifications(bundle, true);
+    }
+
+    @ReactMethod
     public void createMessageNotification(ReadableMap details) {
         Bundle bundle = Arguments.toBundle(details);
         // If notification ID is not provided by the user, generate one at random
         if (bundle.getString("id") == null) {
-            bundle.putInt("notificationID", bundle.getString("dialog_id").hashCode());
+            String dialog_id = bundle.getString("dialog_id");
+            if (dialog_id == null) {
+              return;
+            }
+            bundle.putInt("notificationID", dialog_id.hashCode());
         } else {
             bundle.putInt("notificationID", Integer.parseInt(bundle.getString("id")));
             bundle.remove("id");
         }
 
-        mRNPushNotificationHelper.sendToMessagingNotificatios(bundle);
+        mRNPushNotificationHelper.sendToMessagingNotifications(bundle);
     }
 
     @ReactMethod
@@ -173,24 +188,6 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
       System.out.println("[createGroupNotification][arguments]");
       System.out.println(bundle);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTaskNotify(String taskName) {
-        System.out.println("[registerBackgroundTaskNotify][arguments] " + taskName);
-        JSPushNotificationTask.setNotifyTaskName(taskName);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTaskMarkAsRead(String taskName) {
-        System.out.println("[registerBackgroundTaskMarkAsRead][arguments] " + taskName);
-        JSPushNotificationTask.setMarkAsReadTaskName(taskName);
-    }
-
-    @ReactMethod
-    public void registerBackgroundTasReply(String taskName) {
-        System.out.println("[registerBackgroundTasReply][arguments] " + taskName);
-        JSPushNotificationTask.setRelyTaskName(taskName);
     }
 
     @ReactMethod
@@ -294,7 +291,70 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
+    public void cancelCallNotification() {
+        Intent stopCallService = new Intent(applicationContext, CallsService.class);
+        applicationContext.stopService(stopCallService);
+        mRNPushNotificationHelper.clearNotification(CallsService.CALL_NOTIFICATION_ID);
+    }
+
+    @ReactMethod
     public void registerNotificationActions(ReadableArray actions) {
         registerNotificationsReceiveNotificationActions(actions);
     }
+
+    @ReactMethod
+    public void backToForeground(ReadableMap notificationBundle) {
+        if (isAndroidXOrHigher) {
+            mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationBundle), false);
+        } else {
+            String packageName = applicationContext.getApplicationContext().getPackageName();
+            Intent focusIntent = applicationContext.getPackageManager().getLaunchIntentForPackage(packageName).cloneFilter();
+            focusIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            Activity activity = getCurrentActivity();
+            activity.startActivity(focusIntent);
+        }
+    }
+
+    @ReactMethod
+    public void launchApp(ReadableMap notificationData) {
+        if (isAndroidXOrHigher) {
+            mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData), false);
+        } else {
+            Intent launchIntent = new Intent(applicationContext, getMainActivityClass(applicationContext));
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Bundle launchIntentDateBundle = Arguments.toBundle(notificationData);
+            launchIntent.putExtra("notification", launchIntentDateBundle);
+            applicationContext.startActivity(launchIntent);
+        }
+    }
+
+    @ReactMethod
+    public void updateMessageNotificationSettings(ReadableMap notificationSettings, Promise promise) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            promise.resolve(true);
+            return;
+        }
+        String notificationType = notificationSettings.getString("сhannelType");
+        NotificationChannelManager.CHANNELS channelType = notificationChannelManager.getType(notificationType);
+        if (notificationSettings.hasKey("sound")) {
+            notificationChannelManager.updateChannelSound(channelType, notificationSettings.getString("sound"));
+        }
+        if (notificationSettings.hasKey("vibrate")) {
+            notificationChannelManager.updateChannelVibration(channelType, notificationSettings.getBoolean("vibrate"));
+        }
+        promise.resolve(true);
+    }
+
+    public Class getMainActivityClass(Context context) {
+        String packageName = context.getPackageName();
+        Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+        String className = launchIntent.getComponent().getClassName();
+        try {
+            return Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 }

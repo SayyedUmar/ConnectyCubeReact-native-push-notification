@@ -205,7 +205,8 @@ public class RNPushNotificationHelper {
             String packageName = context.getPackageName();
 
             String smallIcon = bundle.getString("smallIcon");
-            int smallIconResId = 0;
+
+            int smallIconResId;
 
             if (smallIcon != null) {
                 smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
@@ -219,10 +220,6 @@ public class RNPushNotificationHelper {
                 if (smallIconResId == 0) {
                     smallIconResId = android.R.drawable.ic_dialog_info;
                 }
-            }
-
-            if (largeIconResId != 0 && (largeIcon != null || Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)) {
-                notification.setLargeIcon(largeIconBitmap);
             }
 
             notificationBuilder.setSmallIcon(smallIconResId);
@@ -363,15 +360,16 @@ public class RNPushNotificationHelper {
             }
 
             String numberString = bundle.getString("number", hashMapDialogsToMessages.getCountOfMessage() + "");
+
             if (numberString != null) {
                 notificationBuilder.setNumber(Integer.parseInt(numberString));
             }
 
-            int smallIconResId;
-            int largeIconResId;
-
             String smallIcon = bundle.getString("smallIcon");
             String largeIcon = bundle.getString("largeIcon");
+
+            int smallIconResId;
+            int largeIconResId;
 
             if (smallIcon != null) {
                 smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
@@ -582,18 +580,18 @@ public class RNPushNotificationHelper {
 
         notification.setContentText(message);
 
-        String largeIcon = bundle.getString("largeIcon");
-
 
         String numberString = bundle.getString("number", hashMapDialogsToMessages.getCountOfMessage() + "");
+
         if (numberString != null) {
           notification.setNumber(Integer.parseInt(numberString));
         }
 
+        String smallIcon = bundle.getString("smallIcon");
+        String largeIcon = bundle.getString("largeIcon");
+
         int smallIconResId;
         int largeIconResId;
-
-        String smallIcon = bundle.getString("smallIcon");
 
         if (smallIcon != null) {
           smallIconResId = res.getIdentifier(smallIcon, "mipmap", packageName);
@@ -875,6 +873,7 @@ public class RNPushNotificationHelper {
             }
 
             String numberString = bundle.getString("number");
+
             if (numberString != null) {
                 notification.setNumber(Integer.parseInt(numberString));
             }
@@ -919,6 +918,7 @@ public class RNPushNotificationHelper {
             }
 
             notification.setSmallIcon(smallIconResId);
+            
             String bigText = bundle.getString("bigText");
 
             if (bigText == null) {

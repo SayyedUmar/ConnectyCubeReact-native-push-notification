@@ -77,7 +77,7 @@ public class JSPushNotificationTask extends HeadlessJsTaskService {
         } else if (taskName.equals(END_CALL_TASK_KEY)) {
             String janusGroupIdKey = extras.getString("janusGroupId");
             boolean result = removeHangUpRunable(janusGroupIdKey);
-           Log.d(TAG, "[resultCancelHangUpTimeout] " + result);
+            Log.d(TAG, "[resultCancelHangUpTimeout] " + result);
         }
         boolean isCallPush = taskName.equals(START_CALL_TASK_KEY) || taskName.equals(END_CALL_TASK_KEY);
         if (this.isApplicationInForeground() && !isCallPush) {

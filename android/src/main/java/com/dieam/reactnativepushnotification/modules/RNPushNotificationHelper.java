@@ -255,6 +255,7 @@ public class RNPushNotificationHelper {
                 answerIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 Bundle answerBundle = new Bundle(bundle);
                 answerBundle.putBoolean("answer", true);
+                answerBundle.putString(JSPushNotificationTask.BUNDLE_TASK_NAME_KEY, JSPushNotificationTask.START_CALL_TASK_KEY);
                 answerIntent.putExtra(NOTIFICATION_BUNDLE, answerBundle);
 
                 int pendingAnswerIntentId = randomIds.nextInt();

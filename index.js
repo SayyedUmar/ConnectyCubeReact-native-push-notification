@@ -16,7 +16,7 @@ var Notifications = {
 	onRegister: false,
 	onError: false,
 	onNotification: false,
-  	onRemoteFetch: false,
+  onRemoteFetch: false,
 	isLoaded: false,
 	hasPoppedInitialNotification: false,
 
@@ -26,9 +26,9 @@ var Notifications = {
 		alert: true,
 		badge: true,
 		sound: true
-  	},
+	},
 
-  	JS_BACKGROUND_TASKS_KEYS: {
+	JS_BACKGROUND_TASKS_KEYS: {
 		START_CALL_TASK_KEY: 'START_CALL_TASK_KEY',
 		END_CALL_TASK_KEY: 'END_CALL_TASK_KEY',
 		NOTIFY_TASK_KEY: 'NOTIFY_TASK_KEY',

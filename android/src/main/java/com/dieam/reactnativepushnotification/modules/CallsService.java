@@ -19,8 +19,13 @@ public class CallsService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Notification notification = intent.getParcelableExtra("notification");
-        startForeground(CALL_NOTIFICATION_ID, notification);
+        try {
+            Notification notification = intent.getParcelableExtra("notification");
+            startForeground(CALL_NOTIFICATION_ID, notification);
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+
         return super.onStartCommand(intent, flags, startId);
     }
 

@@ -427,9 +427,12 @@ public class RNPushNotificationHelper {
             actionBundle.putStringArrayList("message_ids", message_ids);
 
             if (actionsBundle != null) {
+                // Need to display the action "REPLAY" on the left and the action "MARK AS READ" on the right in Notification
+                List<String> actionKeyList = new ArrayList<String>(actionsBundle.keySet());
+                Collections.reverse(actionKeyList);
                 // No icon for now. The icon value of 0 shows no icon.
                 int icon = 0;
-                for (String actionName : actionsBundle.keySet()) {
+                for (String actionName : actionKeyList) {
                     String jsBgTaskName = actionsBundle.getString(actionName);
 
                     Intent actionIntent = new Intent(context, JSPushNotificationTask.class);

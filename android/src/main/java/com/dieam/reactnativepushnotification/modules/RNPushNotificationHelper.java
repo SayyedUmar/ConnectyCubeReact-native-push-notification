@@ -331,7 +331,8 @@ public class RNPushNotificationHelper {
             }
 
             if (!isPrivateDialog) {
-                messagingStyle.addMessage("", 0, dialog + "(" + allMessages.size() + " new messages)");
+                String s = allMessages.size() > 1 ? "s" : "";
+                messagingStyle.addMessage("", 0, dialog + " (" + allMessages.size() + " new message" + s + ")");
             }
 
             ArrayList<String> message_ids = new ArrayList<>();

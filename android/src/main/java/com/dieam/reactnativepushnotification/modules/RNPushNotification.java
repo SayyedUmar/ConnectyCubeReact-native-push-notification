@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat;
 import com.dieam.reactnativepushnotification.helpers.ApplicationBadgeHelper;
 import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
@@ -223,6 +224,11 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
             }
         }
         promise.resolve(params);
+    }
+
+    @ReactMethod
+    public void getDeliveredNotifications(Callback callback) {
+        callback.invoke(mRNPushNotificationHelper.getDeliveredNotifications());
     }
 
     @ReactMethod

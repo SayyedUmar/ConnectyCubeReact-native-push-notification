@@ -20,13 +20,17 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.RemoteInput;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.bridge.WritableMap;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -294,6 +298,32 @@ public class RNPushNotificationHelper {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public WritableArray getDeliveredNotifications() {
+        WritableArray result = Arguments.createArray();
+    
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return result;
+        }
+
+        NotificationManager notificationManager = notificationManager();
+        StatusBarNotification activeNotifications[] = notificationManager.getActiveNotifications();
+        Log.i(LOG_TAG, "Found " + activeNotifications.length + " activeNotifications notifications");
+
+        for (StatusBarNotification notification : activeNotifications) {
+            Notification original = notification.getNotification();
+            Bundle extras = original.extras;
+            WritableMap n = Arguments.createMap();
+            n.putString("identifier", "" + notification.getId());
+            n.putString("title", extras.getString(Notification.EXTRA_TITLE));
+            n.putString("body", extras.getString(Notification.EXTRA_TEXT));
+            n.putString("dialog_id", original.getGroup());
+            result.pushMap(n);
+        }
+
+        return result;
+    }
+
     public void sendToMessagingNotifications(Bundle bundle) {
         System.out.println("[sendToMessagingNotificatios][arguments]");
         System.out.println(bundle);
@@ -317,6 +347,7 @@ public class RNPushNotificationHelper {
 
             boolean isPrivateDialog = bundle.getBoolean("is_private");
             String dialog = bundle.getString("dialog");
+            String dialog_id = bundle.getString("dialog_id");
             String notificationChannelType = bundle.getString("сhannelType");
             NotificationChannelManager.CHANNELS channelType = notificationChannelManager.getType(notificationChannelType);
 
@@ -350,7 +381,7 @@ public class RNPushNotificationHelper {
                     .setStyle(messagingStyle)
                     .setAutoCancel(true)
                     .setShowWhen(true)
-                    .setGroup(dialog)
+                    .setGroup(dialog_id)
                     .setColor(blueColor)
                     .setPriority(NotificationCompat.PRIORITY_MAX);
 
@@ -573,7 +604,7 @@ public class RNPushNotificationHelper {
           .setTicker(bundle.getString("ticker"))
           .setVisibility(visibility)
           .setPriority(priority)
-          .setGroup(NOTIFICATION_GROUP_ID)
+          .setGroup(dialog_id)
           .setAutoCancel(bundle.getBoolean("autoCancel", true));
 
         notification.setContentText(message);
@@ -748,7 +779,7 @@ public class RNPushNotificationHelper {
               .setBigContentTitle(hashMapDialogsToMessages.getCountOfMessage() + " new messages")
               .setSummaryText(hashMapDialogsToMessages.getCountOfMessage() + " new messages from " +
                   (hashMapDialogsToMessages.getCountOfDialogs() == 1 ?  "1 chat" : hashMapDialogsToMessages.getCountOfDialogs() + " chats")))
-            .setGroup(NOTIFICATION_GROUP_ID)
+            .setGroup(dialog_id)
             .setGroupSummary(true)
             .setContentIntent(pendingIntentContent)
             .setAutoCancel(true)
@@ -847,7 +878,7 @@ public class RNPushNotificationHelper {
                     .setPriority(priority)
                     .setAutoCancel(true);
 
-            String group = bundle.getString("group");
+            String group = bundle.getString("dialog_id");
             if (group != null) {
                 notification.setGroup(group);
             }

@@ -38,7 +38,6 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     private final Random mRandomNumberGenerator = new Random(System.currentTimeMillis());
     private RNPushNotificationJsDelivery mJsDelivery;
     private Application applicationContext;
-    public static boolean isAndroidXOrHigher = Build.VERSION.SDK_INT > Build.VERSION_CODES.P;
     public NotificationChannelManager notificationChannelManager;
 
     public RNPushNotification(ReactApplicationContext reactContext) {
@@ -310,28 +309,12 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
     @ReactMethod
     public void backToForeground(ReadableMap notificationBundle) {
-        if (isAndroidXOrHigher) {
-            mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationBundle), false);
-        } else {
-            String packageName = applicationContext.getApplicationContext().getPackageName();
-            Intent focusIntent = applicationContext.getPackageManager().getLaunchIntentForPackage(packageName).cloneFilter();
-            focusIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            Activity activity = getCurrentActivity();
-            activity.startActivity(focusIntent);
-        }
+        mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationBundle), false);
     }
 
     @ReactMethod
     public void launchApp(ReadableMap notificationData) {
-        if (isAndroidXOrHigher) {
-            mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData), false);
-        } else {
-            Intent launchIntent = new Intent(applicationContext, getMainActivityClass(applicationContext));
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            Bundle launchIntentDateBundle = Arguments.toBundle(notificationData);
-            launchIntent.putExtra("notification", launchIntentDateBundle);
-            applicationContext.startActivity(launchIntent);
-        }
+        mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData), false);
     }
 
     @ReactMethod

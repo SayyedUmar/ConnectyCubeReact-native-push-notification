@@ -155,7 +155,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     @ReactMethod
     public void createCallNotification(ReadableMap details) {
         Bundle bundle = Arguments.toBundle(details);
-        mRNPushNotificationHelper.sendToCallNotifications(bundle, true);
+        mRNPushNotificationHelper.sendToCallNotifications(bundle);
     }
 
     @ReactMethod
@@ -297,9 +297,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
     @ReactMethod
     public void cancelCallNotification() {
-        Intent stopCallService = new Intent(applicationContext, CallsService.class);
-        applicationContext.stopService(stopCallService);
-        mRNPushNotificationHelper.clearNotification(CallsService.CALL_NOTIFICATION_ID);
+        mRNPushNotificationHelper.clearNotification(RNPushNotificationHelper.NOTIFICATION_CALL_ID);
     }
 
     @ReactMethod
@@ -308,13 +306,8 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
-    public void backToForeground(ReadableMap notificationBundle) {
-        mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationBundle), false);
-    }
-
-    @ReactMethod
-    public void launchApp(ReadableMap notificationData) {
-        mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData), false);
+    public void showCallNotification(ReadableMap notificationData) {
+        mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData));
     }
 
     @ReactMethod

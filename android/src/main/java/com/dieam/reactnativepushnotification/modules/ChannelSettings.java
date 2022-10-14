@@ -53,10 +53,10 @@ public class ChannelSettings {
 
     public void setDefaultCallChannelSettings() {
         name = "Calls";
-        importance = NotificationManager.IMPORTANCE_DEFAULT;
+        importance = NotificationManager.IMPORTANCE_HIGH;
         lockScreenVisibility = Notification.VISIBILITY_PUBLIC;
-        vibration = false;
-        lights = false;
+        vibration = true;
+        lights = true;
         soundAtr = getDefaultSoundArt();
         soundUri = getSoundUri(context, DEFAULT_CALL_SOUND);
     }

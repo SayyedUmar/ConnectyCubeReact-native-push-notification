@@ -132,12 +132,8 @@ NotificationsComponent.prototype.clearAllNotifications = function () {
   RNPushNotification.clearAllNotifications();
 };
 
-NotificationsComponent.prototype.launchApp = function (launchOptions) {
-  return RNPushNotification.launchApp(launchOptions);
-};
-
-NotificationsComponent.prototype.backToForeground = function (options = {}) {
-  return RNPushNotification.backToForeground(options);
+NotificationsComponent.prototype.showCallNotification = function (options) {
+  return RNPushNotification.showCallNotification(options);
 };
 
 NotificationsComponent.prototype.cancelCallNotification = function () {

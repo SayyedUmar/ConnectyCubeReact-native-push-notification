@@ -372,12 +372,8 @@ Notifications.popInitialNotification = function (handler) {
   });
 };
 
-Notifications.launchApp = function (launchApp) {
-  return this.callNative("launchApp", arguments);
-};
-
-Notifications.backToForeground = function () {
-  return this.callNative("backToForeground", arguments);
+Notifications.showCallNotification = function () {
+  return this.callNative("showCallNotification", arguments);
 };
 
 Notifications.abandonPermissions = function () {

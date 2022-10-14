@@ -51,7 +51,6 @@ public class RNPushNotificationHelper {
     private static final String NOTIFICATION_CHANNEL_CALL_ID = "rn-push-notification-channel-call-id";
     private static final String NOTIFICATION_GROUP_ID = "rn-push-notification-group-id";
     private static final int NOTIFICATION_WITH_GROUP_ID = 6784;
-    public static final int  NOTIFICATION_CALL_ID = 6785;
     public static final String CLEAR_MESSAGE = "CLEAR_MESSAGE";
     public static final String NOTIFICATION_BUNDLE = "notification";
     public static final String DELETE_MESSAGE = "DELETE_MESSAGE";
@@ -297,7 +296,11 @@ public class RNPushNotificationHelper {
 
             notification.flags = notification.flags | Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE;
 
-            notificationManager.notify(NOTIFICATION_CALL_ID, notification);
+            Intent startCallServiceIntent = new Intent(context, CallsService.class);
+            Bundle startServiceBundle = new Bundle();
+            startServiceBundle.putParcelable("notification", notification);
+            startCallServiceIntent.putExtras(startServiceBundle);
+            context.startService(startCallServiceIntent);
         } catch (Exception e) {
             Log.e(LOG_TAG, "failed to send push notification", e);
         }

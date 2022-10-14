@@ -306,7 +306,12 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     }
 
     @ReactMethod
-    public void showCallNotification(ReadableMap notificationData) {
+    public void backToForeground(ReadableMap notificationBundle) {
+        mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationBundle));
+    }
+
+    @ReactMethod
+    public void launchApp(ReadableMap notificationData) {
         mRNPushNotificationHelper.sendToCallNotifications(Arguments.toBundle(notificationData));
     }
 

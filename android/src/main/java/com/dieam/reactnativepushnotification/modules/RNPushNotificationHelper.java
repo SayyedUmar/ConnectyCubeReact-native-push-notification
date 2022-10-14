@@ -185,7 +185,7 @@ public class RNPushNotificationHelper {
     }
 
     public void sendToCallNotifications(Bundle bundle, boolean onlyForegroundService) {
-        boolean isWithFillScreenIntent = RNPushNotification.isAndroidXOrHigher && !onlyForegroundService;
+        boolean isWithFillScreenIntent = Build.VERSION.SDK_INT > Build.VERSION_CODES.P && !onlyForegroundService;
         Random randomIds = new Random();
         Class intentClass = getMainActivityClass();
         try {

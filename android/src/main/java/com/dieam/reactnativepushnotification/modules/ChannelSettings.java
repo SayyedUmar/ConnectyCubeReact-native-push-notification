@@ -31,7 +31,7 @@ public class ChannelSettings {
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     ChannelSettings(Context context, NotificationChannel channel) {
-        id = channel.getId();
+        id = channel == null ? "" : channel.getId();
         name = (String) channel.getName();
         importance = channel.getImportance();
         vibration = channel.shouldVibrate();
@@ -43,6 +43,16 @@ public class ChannelSettings {
 
     public void setDefaultMessageChannelSettings() {
         name = "Messages";
+        importance = NotificationManager.IMPORTANCE_HIGH;
+        lockScreenVisibility = Notification.VISIBILITY_PUBLIC;
+        vibration = true;
+        lights = true;
+        soundAtr = getDefaultSoundArt();
+        soundUri = getSoundUri(context, DEFAULT_MESSAGE_SOUND);
+    }
+
+    public void setDefaultGroupMessageChannelSettings() {
+        name = "GroupMessages";
         importance = NotificationManager.IMPORTANCE_HIGH;
         lockScreenVisibility = Notification.VISIBILITY_PUBLIC;
         vibration = true;

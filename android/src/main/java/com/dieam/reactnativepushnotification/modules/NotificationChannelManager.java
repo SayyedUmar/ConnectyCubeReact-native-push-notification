@@ -123,10 +123,12 @@ public class NotificationChannelManager {
             ChannelSettings channelSettings = new ChannelSettings(context);
             channelSettings.id = generateNewChannelId();
             switch (channel) {
-                case IN_APP_MESSAGES:
                 case PUSH_MESSAGES:
-                case IN_APP_GROUP:
+                case IN_APP_MESSAGES:
                     channelSettings.setDefaultMessageChannelSettings();
+                    break;
+                case IN_APP_GROUP:
+                    channelSettings.setDefaultGroupMessageChannelSettings();
                     break;
                 case CALLS:
                     channelSettings.setDefaultCallChannelSettings();

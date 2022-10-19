@@ -297,9 +297,8 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
     @ReactMethod
     public void cancelCallNotification() {
-        Intent stopCallService = new Intent(applicationContext, CallsService.class);
-        applicationContext.stopService(stopCallService);
-        mRNPushNotificationHelper.clearNotification(CallsService.CALL_NOTIFICATION_ID);
+        mRNPushNotificationHelper.clearNotification(RNPushNotificationHelper.CALL_NOTIFICATION_ID);
+        RNPushNotificationMessageLine.clear(RNPushNotificationHelper.CALL_NOTIFICATION_ID);
     }
 
     @ReactMethod
@@ -323,7 +322,7 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
             promise.resolve(true);
             return;
         }
-        String notificationType = notificationSettings.getString("сhannelType");
+        String notificationType = notificationSettings.getString("channelType");
         NotificationChannelManager.CHANNELS channelType = notificationChannelManager.getType(notificationType);
         if (notificationSettings.hasKey("sound")) {
             notificationChannelManager.updateChannelSound(channelType, notificationSettings.getString("sound"));

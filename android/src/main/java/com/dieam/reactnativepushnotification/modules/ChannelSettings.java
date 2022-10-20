@@ -37,8 +37,8 @@ public class ChannelSettings {
         vibration = channel.shouldVibrate();
         lights = channel.shouldShowLights();
         lockScreenVisibility = channel.getLockscreenVisibility();
-        soundUri = channel.getSound();
         soundAtr = channel.getAudioAttributes();
+        soundUri = channel.getSound();
     }
 
     public void setDefaultMessageChannelSettings() {
@@ -52,7 +52,7 @@ public class ChannelSettings {
     }
 
     public void setDefaultGroupMessageChannelSettings() {
-        name = "GroupMessages";
+        name = "Groupchat";
         importance = NotificationManager.IMPORTANCE_HIGH;
         lockScreenVisibility = Notification.VISIBILITY_PUBLIC;
         vibration = true;

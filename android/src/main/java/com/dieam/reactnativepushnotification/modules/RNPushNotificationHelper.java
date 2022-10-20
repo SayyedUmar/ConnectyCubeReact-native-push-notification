@@ -46,6 +46,7 @@ import static com.dieam.reactnativepushnotification.modules.RNPushNotificationAt
 public class RNPushNotificationHelper {
     public static final String PREFERENCES_KEY = "rn_push_notification";
     private static final long DEFAULT_VIBRATION = 300L;
+    private static final long DEFAULT_CALL_VIBRATION = 30000L;
     private static final String NOTIFICATION_CHANNEL_ID = "rn-push-notification-channel-id";
     private static final String NOTIFICATION_CHANNEL_CALL_ID = "rn-push-notification-channel-call-id";
     private static final String NOTIFICATION_GROUP_ID = "rn-push-notification-group-id";
@@ -240,9 +241,9 @@ public class RNPushNotificationHelper {
             }
 
             if (bundle.getBoolean("vibrate", true)) {
-                long vibration = bundle.containsKey("vibration") ? (long) bundle.getDouble("vibration") : DEFAULT_VIBRATION;
+                long vibration = bundle.containsKey("vibration") ? (long) bundle.getDouble("vibration") : DEFAULT_CALL_VIBRATION;
                 if (vibration == 0)
-                    vibration = DEFAULT_VIBRATION;
+                    vibration = DEFAULT_CALL_VIBRATION;
                 notificationBuilder.setVibrate(new long[]{0, vibration});
             }
 
@@ -263,13 +264,15 @@ public class RNPushNotificationHelper {
             PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
             notificationBuilder.setContentIntent(contentPendingIntent);
 
-            Intent fullScreenIntent = new Intent(context, intentClass);
-            fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            fullScreenIntent.putExtra(NOTIFICATION_BUNDLE, bundle);
+            if (bundle.getBoolean("startFullScreen", false)) {
+                Intent fullScreenIntent = new Intent(context, intentClass);
+                fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                fullScreenIntent.putExtra(NOTIFICATION_BUNDLE, bundle);
 
-            int pendingFullScreenIntentId = randomIds.nextInt();
-            PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, pendingFullScreenIntentId, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-            notificationBuilder.setFullScreenIntent(fullScreenPendingIntent, true);
+                int pendingFullScreenIntentId = randomIds.nextInt();
+                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, pendingFullScreenIntentId, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                notificationBuilder.setFullScreenIntent(fullScreenPendingIntent, true);
+            }
 
             Intent answerIntent = new Intent(context, intentClass);
             answerIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);

@@ -67,6 +67,9 @@ public class RNPushNotificationHelper {
     private final SharedPreferences scheduledNotificationsPersistence;
 
     private int blueColor = Color.argb(255, 67, 163, 204);
+    private int intentFlagTypeUpdateCurrent = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+        ? PendingIntent.FLAG_MUTABLE
+        : PendingIntent.FLAG_UPDATE_CURRENT;
 
     public NotificationChannelManager notificationChannelManager;
 
@@ -80,7 +83,6 @@ public class RNPushNotificationHelper {
     public static void clearMessage()
     {
         hashMapDialogsToMessages.clear();
-
     }
 
     public static void deleteMessage(String dialog_id, String message_id)
@@ -111,7 +113,7 @@ public class RNPushNotificationHelper {
         notificationIntent.putExtra(RNPushNotificationPublisher.NOTIFICATION_ID, notificationID);
         notificationIntent.putExtras(bundle);
 
-        return PendingIntent.getBroadcast(context, notificationID, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getBroadcast(context, notificationID, notificationIntent, intentFlagTypeUpdateCurrent);
     }
 
     public void sendNotificationScheduled(Bundle bundle) {
@@ -261,7 +263,7 @@ public class RNPushNotificationHelper {
             intent.putExtra(NOTIFICATION_BUNDLE, bundle);
 
             int pendingIntentId = randomIds.nextInt();
-            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent contentPendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, intentFlagTypeUpdateCurrent);
             notificationBuilder.setContentIntent(contentPendingIntent);
 
             if (bundle.getBoolean("startFullScreen", false)) {
@@ -270,7 +272,7 @@ public class RNPushNotificationHelper {
                 fullScreenIntent.putExtra(NOTIFICATION_BUNDLE, bundle);
 
                 int pendingFullScreenIntentId = randomIds.nextInt();
-                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, pendingFullScreenIntentId, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, pendingFullScreenIntentId, fullScreenIntent, intentFlagTypeUpdateCurrent);
                 notificationBuilder.setFullScreenIntent(fullScreenPendingIntent, true);
             }
 
@@ -282,7 +284,7 @@ public class RNPushNotificationHelper {
             answerIntent.putExtra(NOTIFICATION_BUNDLE, answerBundle);
 
             int pendingAnswerIntentId = randomIds.nextInt();
-            PendingIntent answerPendingIntent = PendingIntent.getActivity(context, pendingAnswerIntentId, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent answerPendingIntent = PendingIntent.getActivity(context, pendingAnswerIntentId, answerIntent, intentFlagTypeUpdateCurrent);
 
             Intent declineIntent = new Intent(context, JSPushNotificationTask.class);
             Bundle declineBundle = new Bundle(bundle);
@@ -291,7 +293,7 @@ public class RNPushNotificationHelper {
             declineIntent.putExtras(declineBundle);
 
             int pendingDeclineIntentId = randomIds.nextInt();
-            PendingIntent declinePendingIntent = PendingIntent.getService(context, pendingDeclineIntentId, declineIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent declinePendingIntent = PendingIntent.getService(context, pendingDeclineIntentId, declineIntent, intentFlagTypeUpdateCurrent);
 
             notificationBuilder.addAction(0, "Accept", answerPendingIntent);
             notificationBuilder.addAction(0, "Decline", declinePendingIntent);
@@ -456,14 +458,14 @@ public class RNPushNotificationHelper {
             intent.putExtra(DELETE_MESSAGE, true);
             intent.putExtra(NOTIFICATION_BUNDLE, bundle);
             int pendingIntentId = message_id.hashCode();
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, pendingIntentId, intent, intentFlagTypeUpdateCurrent);
 
             notificationBuilder.setContentIntent(pendingIntent);
 
             Intent intentDeleteNotification = new Intent(context, DeleteNotification.class);
             intentDeleteNotification.putExtra(DELETE_MESSAGE, true);
             intentDeleteNotification.putExtra(NOTIFICATION_BUNDLE, bundle);
-            PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, pendingIntentId, intentDeleteNotification, 0);
+            PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, pendingIntentId, intentDeleteNotification, PendingIntent.FLAG_MUTABLE);
 
             // notificationBuilder.setDeleteIntent(pendingIntentDeleteNotification);
 
@@ -492,7 +494,7 @@ public class RNPushNotificationHelper {
                     actionIntent.putExtras(actionBundle);
                     int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
                     PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
-                            PendingIntent.FLAG_UPDATE_CURRENT);
+                            intentFlagTypeUpdateCurrent);
                     if (jsBgTaskName.equals(JSPushNotificationTask.REPLY_TASK_KEY)) {
                         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
                         {
@@ -688,7 +690,7 @@ public class RNPushNotificationHelper {
           intent.putExtra(NOTIFICATION_BUNDLE, bundle);
 
         PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationID, intent,
-          PendingIntent.FLAG_UPDATE_CURRENT);
+          intentFlagTypeUpdateCurrent);
 
         NotificationManager notificationManager = notificationManager();
         checkOrCreateChannel(notificationManager, false, soundName);
@@ -698,7 +700,7 @@ public class RNPushNotificationHelper {
           Intent intentDeleteNotification = new Intent(context, DeleteNotification.class);
           intentDeleteNotification.putExtra(DELETE_MESSAGE, true);
           intentDeleteNotification.putExtra(NOTIFICATION_BUNDLE, bundle);
-          PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, 0, intentDeleteNotification, 0);
+          PendingIntent pendingIntentDeleteNotification = PendingIntent.getBroadcast(context, 0, intentDeleteNotification, PendingIntent.FLAG_MUTABLE);
           notification.setDeleteIntent(pendingIntentDeleteNotification);
 
         if (!bundle.containsKey("vibrate") || bundle.getBoolean("vibrate")) {
@@ -742,7 +744,7 @@ public class RNPushNotificationHelper {
                   actionIntent.putExtras(bundle);
                   int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
                   PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
-                          PendingIntent.FLAG_UPDATE_CURRENT);
+                          intentFlagTypeUpdateCurrent);
                   notification.addAction(icon, action, pendingActionIntent);
               }
           }
@@ -772,12 +774,12 @@ public class RNPushNotificationHelper {
         }
 
           Intent intentDelete = new Intent(context, DeleteSummaryNotification.class);
-          PendingIntent pendingIntentDelete = PendingIntent.getBroadcast(context, 0, intentDelete, 0);
+          PendingIntent pendingIntentDelete = PendingIntent.getBroadcast(context, 0, intentDelete, PendingIntent.FLAG_MUTABLE);
 
           Intent intentContext = new Intent(context, getMainActivityClass());
           intentContext.putExtra(CLEAR_MESSAGE, true);
           PendingIntent pendingIntentContent = PendingIntent.getActivity(context, NOTIFICATION_WITH_GROUP_ID, intentContext,
-                  PendingIntent.FLAG_UPDATE_CURRENT);
+                  intentFlagTypeUpdateCurrent);
 
         Notification summaryNotification =
           new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
@@ -1005,7 +1007,7 @@ public class RNPushNotificationHelper {
             int notificationID = Integer.parseInt(notificationIdString);
 
             PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationID, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
+                    intentFlagTypeUpdateCurrent);
 
             NotificationManager notificationManager = notificationManager();
             checkOrCreateChannel(notificationManager, false, soundName);
@@ -1053,7 +1055,7 @@ public class RNPushNotificationHelper {
                     actionIntent.putExtras(bundle);
                     int actionNotificationID = notificationID + (int)(System.currentTimeMillis() / 1000);
                     PendingIntent pendingActionIntent = PendingIntent.getService(context, actionNotificationID, actionIntent,
-                            PendingIntent.FLAG_UPDATE_CURRENT);
+                            intentFlagTypeUpdateCurrent);
                     notification.addAction(icon, action, pendingActionIntent);
                 }
             }
